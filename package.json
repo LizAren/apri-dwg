@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node strumenti/comprimi.mjs",
     "anteprima": "vite preview",
     "verifica": "node strumenti/verifica.mjs"
   },
