@@ -1,0 +1,23 @@
+{
+  "name": "dwg-fostinelli",
+  "version": "0.1.0",
+  "description": "Visualizzatore DWG/DXF e convertitore in PDF vettoriale, interamente lato browser",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "anteprima": "vite preview",
+    "verifica": "node strumenti/verifica.mjs"
+  },
+  "dependencies": {
+    "@mlightcad/libredwg-web": "^0.7.9",
+    "dxf-parser": "^1.1.2",
+    "jspdf": "^3.0.3"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "vite": "^7.1.5"
+  }
+}

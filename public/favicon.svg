@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Apri DWG">
+  <!-- Stessa famiglia delle icone delle app: quadrato scuro con angoli tondi,
+       glifo nel colore del progetto. Qui il glifo è una squadra da disegno con
+       un arco quotato: dice «disegno tecnico» senza scriverlo. -->
+  <rect width="64" height="64" rx="14" fill="#171717" />
+  <g fill="none" stroke="#3f7fb5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 46 L14 18 L42 46 Z" />
+    <path d="M22 46 a24 24 0 0 0 24 -24" stroke="#7db3e0" stroke-width="2.4" />
+  </g>
+</svg>

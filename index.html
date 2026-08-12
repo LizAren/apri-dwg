@@ -1,0 +1,209 @@
+<!doctype html>
+<!--
+  Apri DWG — Copyright (C) 2026 Stefano Fostinelli
+  Software libero sotto GNU General Public License v3 o successiva.
+  Sorgente completo: https://github.com/LizAren/apri-dwg
+-->
+
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Apri DWG — Stefano Fostinelli</title>
+    <meta
+      name="description"
+      content="Apri un disegno DWG o DXF nel browser e convertilo in PDF vettoriale in scala. Il file resta sul tuo computer: non viene caricato da nessuna parte."
+    />
+    <link rel="canonical" href="https://www.fostinellistefano.it/DWG/" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Apri DWG — Stefano Fostinelli" />
+    <meta
+      property="og:description"
+      content="Disegni DWG e DXF aperti nel browser e convertiti in PDF vettoriale in scala. Il file non lascia il tuo computer."
+    />
+    <meta property="og:url" content="https://www.fostinellistefano.it/DWG/" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <script type="module" src="./src/main.js"></script>
+    <link rel="stylesheet" href="./src/stile.css" />
+  </head>
+
+  <body>
+    <header class="barra">
+      <a class="ritorno" href="../index.html" title="Torna al portfolio">
+        <span aria-hidden="true">←</span> fostinellistefano.it
+      </a>
+
+      <h1 class="titolo">Apri DWG</h1>
+
+      <div class="stato" id="stato">
+        <span class="stato-vuoto">nessun disegno aperto</span>
+      </div>
+
+      <div class="comandi">
+        <button type="button" class="comando primario" id="btn-apri">Apri un disegno</button>
+        <button type="button" class="comando" id="btn-tutto" disabled title="Inquadra tutto (tasto Z)">
+          Inquadra tutto
+        </button>
+        <button type="button" class="comando" id="btn-fondo" disabled aria-pressed="false">
+          Fondo bianco
+        </button>
+        <button type="button" class="comando primario" id="btn-pdf" disabled>Converti in PDF</button>
+      </div>
+      <input type="file" id="file" accept=".dwg,.dxf" hidden />
+    </header>
+
+    <main class="corpo">
+      <aside class="pannello" id="pannello" aria-label="Pannello del disegno">
+        <section class="blocco" hidden id="sez-spazi">
+          <h2>Spazi</h2>
+          <div class="elenco" id="spazi"></div>
+        </section>
+
+        <section class="blocco" hidden id="sez-layer">
+          <h2>
+            Layer
+            <button type="button" class="mini" id="btn-layer-tutti">tutti</button>
+            <button type="button" class="mini" id="btn-layer-nessuno">nessuno</button>
+          </h2>
+          <div class="elenco layer" id="layer"></div>
+        </section>
+
+        <section class="blocco" hidden id="sez-rapporto">
+          <h2>Rapporto di lettura</h2>
+          <dl class="rapporto" id="rapporto"></dl>
+          <p class="nota">
+            È un'anteprima di lettura: non sostituisce il CAD. Quello che non si è
+            potuto disegnare è scritto qui sopra, non nascosto.
+          </p>
+        </section>
+
+        <section class="blocco bloccate" id="sez-bloccate">
+          <h2>Funzioni su richiesta</h2>
+          <p class="nota">
+            Queste servono un accesso. Non c'è una registrazione automatica: mi
+            scrivi, ci parliamo, e l'account te lo creo io.
+          </p>
+          <div class="elenco" id="bloccate"></div>
+        </section>
+      </aside>
+
+      <div class="tela-cornice">
+        <canvas id="tela" aria-label="Disegno"></canvas>
+
+        <div class="benvenuto" id="benvenuto">
+          <div class="benvenuto-dentro">
+            <h2>Trascina qui un DWG o un DXF</h2>
+            <p>
+              Il disegno si apre <strong>dentro il browser</strong>: il file non
+              viene caricato su nessun server, non passa da internet e non resta
+              da nessuna parte. Chiudendo la pagina sparisce.
+            </p>
+            <button type="button" class="comando primario grande" id="btn-apri-2">
+              Scegli un file
+            </button>
+            <p class="minuta">
+              Si leggono i DWG dalla versione r13 (1994) alla r2018, e i DXF.<br />
+              La prima apertura di un DWG scarica il lettore: 2,3 MB, una volta sola.
+            </p>
+          </div>
+        </div>
+
+        <div class="attesa" id="attesa" hidden>
+          <div class="attesa-dentro">
+            <div class="barretta"><i></i></div>
+            <p id="attesa-testo">Apro il disegno…</p>
+          </div>
+        </div>
+
+        <p class="errore" id="errore" hidden></p>
+
+        <div class="scala-schermo" id="scala-schermo" hidden></div>
+      </div>
+    </main>
+
+    <!-- Pannello di stampa ------------------------------------------------ -->
+    <dialog class="finestra" id="finestra-pdf">
+      <form method="dialog" class="finestra-dentro" id="modulo-pdf">
+        <h2>Converti in PDF</h2>
+
+        <div class="riga">
+          <label for="pdf-formato">Formato</label>
+          <select id="pdf-formato">
+            <option>A4</option>
+            <option selected>A3</option>
+            <option>A2</option>
+            <option>A1</option>
+            <option>A0</option>
+          </select>
+        </div>
+
+        <div class="riga">
+          <label for="pdf-orientamento">Orientamento</label>
+          <select id="pdf-orientamento">
+            <option value="orizzontale" selected>orizzontale</option>
+            <option value="verticale">verticale</option>
+          </select>
+        </div>
+
+        <div class="riga">
+          <label for="pdf-scala">Scala</label>
+          <select id="pdf-scala">
+            <option value="">adatta al foglio (scala normalizzata)</option>
+          </select>
+        </div>
+
+        <div class="riga" id="riga-unita" hidden>
+          <label for="pdf-unita">Unità del disegno</label>
+          <select id="pdf-unita"></select>
+        </div>
+
+        <div class="riga interruttori">
+          <label><input type="checkbox" id="pdf-mono" /> tutto in nero</label>
+          <label><input type="checkbox" id="pdf-piede" checked /> piè di pagina con la scala</label>
+        </div>
+
+        <p class="nota" id="pdf-nota"></p>
+
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="pdf-annulla">Annulla</button>
+          <button type="button" class="comando primario" id="pdf-fai">Genera il PDF</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Pannello «richiedi accesso» --------------------------------------- -->
+    <dialog class="finestra" id="finestra-accesso">
+      <div class="finestra-dentro">
+        <h2 id="accesso-titolo">Accesso su richiesta</h2>
+        <p id="accesso-testo"></p>
+        <p class="nota">
+          Non c'è un modulo di iscrizione e non c'è un pagamento automatico:
+          gli account li creo a mano, uno alla volta. Scrivimi cosa ti serve e
+          ti rispondo io.
+        </p>
+        <div class="recapiti">
+          <a class="comando primario" id="accesso-mail" href="#">Scrivimi una mail</a>
+          <a class="comando" href="tel:+393453101941">+39 345 3101941</a>
+        </div>
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="accesso-chiudi">Chiudi</button>
+        </div>
+      </div>
+    </dialog>
+
+    <footer class="piede">
+      <p>
+        Il disegno non lascia il tuo computer. Nessun caricamento, nessun account,
+        nessun cookie di profilazione.
+      </p>
+      <p>
+        Questo strumento usa <strong>GNU LibreDWG</strong> ed è software libero
+        sotto licenza <a href="./LICENSE">GPL-3.0</a>.
+        <a href="https://github.com/LizAren/apri-dwg">Sorgente di questa pagina</a> ·
+        <a href="https://github.com/LibreDWG/libredwg">sorgente di LibreDWG</a> ·
+        <a href="../index.html">Stefano Fostinelli</a>
+      </p>
+    </footer>
+  </body>
+</html>
