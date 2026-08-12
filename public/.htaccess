@@ -33,11 +33,20 @@
 
 # La pagina non si lascia incorniciare da altri siti: un accesso dentro un
 # iframe altrui è il modo classico per far cliccare «entra» a chi non voleva.
-<IfModule mod_headers.c>
-  Header always set X-Frame-Options "SAMEORIGIN"
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Referrer-Policy "same-origin"
-</IfModule>
+#
+# 🔴 MISURATO: su questo host queste intestazioni NON arrivano al browser, né
+# al livello della cartella né dentro `FilesMatch`. Altervista sovrascrive le
+# intestazioni di pagine e script con le proprie (sul `.wasm`, dove non ne
+# mette, le nostre passano: la cache di un anno funziona). Restano scritte
+# perché non fanno danno e varranno se un giorno l'host cambia — ma la difesa
+# dalla cornice è nel JavaScript, in src/main.js, che non dipende dal server.
+<FilesMatch "\.(html|php)$">
+  <IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+  </IfModule>
+</FilesMatch>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On

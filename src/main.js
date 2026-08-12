@@ -27,6 +27,28 @@ import { esportaPdf, SCALE } from './esporta/pdf.js'
 
 const $ = (id) => document.getElementById(id)
 
+// ---------------------------------------------------------------------------
+//  Non ci si lascia incorniciare.
+//
+//  🔴 La difesa giusta sarebbe l'intestazione `X-Frame-Options`, ma su questo
+//  host NON è ottenibile: misurato sul sito vero, Altervista sovrascrive le
+//  intestazioni della pagina con le proprie (il `.wasm`, dove non ne mette,
+//  riceve invece le nostre). Restava la via che non dipende dal server.
+//
+//  Serve perché con l'accesso attivo un sito ostile potrebbe incorniciare
+//  questa pagina e far cliccare a un amministratore distratto un «elimina» che
+//  non vedeva. Se siamo dentro una cornice altrui, si esce.
+// ---------------------------------------------------------------------------
+try {
+  if (window.top !== window.self && window.top.location.origin !== location.origin) {
+    window.top.location = location.href
+  }
+} catch {
+  // Origine diversa: il solo fatto di non poter leggere `top` dice che siamo
+  // incorniciati da qualcun altro.
+  window.top.location = location.href
+}
+
 const tela = new Tela($('tela'))
 let modello = null
 let spazioAttivo = null
