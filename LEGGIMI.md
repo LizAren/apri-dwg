@@ -3,8 +3,11 @@
 Apre disegni **DWG e DXF nel browser** e li converte in **PDF vettoriale in
 scala**. Tutto lato utente: il file **non viene caricato da nessuna parte**.
 
-**Stato: fasi 1 e 2 fatte** (12/08/2026). Si apre, si guarda, si stampa; le
-funzioni avanzate si vedono bloccate e portano al contatto. Non è ancora online.
+**Stato: online dal 12/08/2026** su
+[www.fostinellistefano.it/DWG/](https://www.fostinellistefano.it/DWG/), sorgente
+pubblico su [github.com/LizAren/apri-dwg](https://github.com/LizAren/apri-dwg).
+Si apre, si guarda, si stampa; le funzioni avanzate si vedono bloccate e portano
+al contatto.
 Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 
 ## Come si usa
@@ -12,7 +15,7 @@ Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 ```bash
 npm install
 npm run dev        # sviluppo, apre su localhost
-npm run build      # produce dist/ (11 MB, di cui 9,5 sono il lettore DWG)
+npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
 npm run verifica   # 66 controlli misurati sui file di prova
 node strumenti/schermate.mjs   # apre l'app in un browser vero e la fotografa
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
@@ -80,3 +83,18 @@ node strumenti/schermate.mjs   # apre l'app in un browser vero e la fotografa
 - **`hidden` perde contro qualsiasi `display` dichiarato nel foglio di stile.**
   Il pannello d'ingresso restava sopra il disegno e sembrava che il disegno non
   ci fosse: si è visto solo guardando una schermata.
+
+## Numeri veri, misurati online
+
+| | Valore |
+|---|---|
+| Pagina che si apre | ~1,1 s |
+| Primo DWG aperto (compreso lo scaricamento del lettore) | **5,5 s** |
+| Peso del lettore trasferito | **2,16 MB** compressi (9,5 MB il file) |
+| Aperture di DWG dentro i 10 GB/mese | ~4.600 |
+
+🔴 **Altervista non comprime il `.wasm`.** Comprime il JavaScript, ma il
+WebAssembly lo serve intero e non basta chiederglielo in `.htaccess`: la copia
+compressa la prepara `strumenti/comprimi.mjs` alla pubblicazione, e `.htaccess`
+la serve al posto dell'originale. Senza, sono 9,5 MB e 14 secondi per ogni
+apertura. Il numero misurato in locale non era quello che riceveva la gente.
