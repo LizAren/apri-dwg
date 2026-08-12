@@ -129,6 +129,7 @@ export class Accesso {
       this.finestraAdmin.close()
     )
     this.finestraAdmin.querySelector('#admin-crea').addEventListener('click', () => this._crea())
+    this.finestra.querySelector('#pw-fai').addEventListener('click', () => this._cambiaPassword())
   }
 
   _apri() {
@@ -148,6 +149,33 @@ export class Accesso {
     }
     this.finestra.showModal()
     if (!entrato) this.finestra.querySelector('#accedi-nome').focus()
+  }
+
+  /**
+   * Cambio della propria password. Il controllo vero — che quella vecchia sia
+   * giusta e la nuova abbastanza lunga — lo fa il server: qui si mostra solo
+   * quello che risponde.
+   */
+  async _cambiaPassword() {
+    const esito = this.finestra.querySelector('#pw-esito')
+    const vecchia = this.finestra.querySelector('#pw-vecchia')
+    const nuova = this.finestra.querySelector('#pw-nuova')
+    esito.hidden = true
+    esito.classList.remove('riuscito')
+    try {
+      await chiama('auth.php?action=password', {
+        method: 'POST',
+        body: JSON.stringify({ vecchia: vecchia.value, nuova: nuova.value }),
+      })
+      vecchia.value = ''
+      nuova.value = ''
+      esito.textContent = 'Password cambiata. Le altre sessioni sono state chiuse.'
+      esito.classList.add('riuscito')
+      esito.hidden = false
+    } catch (e) {
+      esito.textContent = e.message
+      esito.hidden = false
+    }
   }
 
   async _entra() {

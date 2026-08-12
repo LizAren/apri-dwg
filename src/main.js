@@ -22,7 +22,6 @@ import { UNITA, SCELTE_UNITA } from './modello/unita.js'
 import { Tela } from './vista/tela.js'
 import { montaBloccate } from './interfaccia/blocco.js'
 import { Strumenti } from './interfaccia/strumenti.js'
-import { funzioniDimostrazione } from './interfaccia/permessi.js'
 import { Accesso } from './interfaccia/accesso.js'
 import { esportaPdf, SCALE } from './esporta/pdf.js'
 
@@ -34,13 +33,14 @@ let spazioAttivo = null
 let layerVisibili = new Set()
 
 /**
- * Quali funzioni sono accese adesso.
+ * Quali funzioni sono accese adesso: lo dice il SERVER, e nient'altro.
  *
- * Con un account entrato comanda il SERVER (`utente.funzioni`); senza account
- * vale l'interruttore da dimostrazione nell'indirizzo. Il resto del programma
- * chiede solo questo e non sa da dove venga la risposta.
+ * ⚠️ C'era un interruttore da dimostrazione nell'indirizzo (`?f=tutte`), utile
+ * finché gli account non esistevano. È stato tolto: in un repository pubblico
+ * era una porta aperta e per giunta documentata. Senza account non si accende
+ * niente.
  */
-let abilitate = funzioniDimostrazione()
+let abilitate = []
 
 /**
  * Misure leggibili: la quantità è in unità di disegno, e va portata al
@@ -470,7 +470,7 @@ new ResizeObserver(() => {
 
 /** Rimette a posto strumenti ed elenco bloccate dopo un accesso o un'uscita. */
 function aggiornaPermessi() {
-  abilitate = accesso?.utente ? accesso.funzioni : funzioniDimostrazione()
+  abilitate = accesso?.utente ? accesso.funzioni : []
   strumenti.abilita(abilitate)
   $('sez-strumenti').hidden = !modello || abilitate.length === 0
   montaBloccate($('bloccate'), $('finestra-accesso'), abilitate)

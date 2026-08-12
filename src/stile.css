@@ -1062,3 +1062,27 @@ code.password {
     min-height: 40px;
   }
 }
+
+.cambio {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: var(--carta-soffice);
+  border-radius: var(--r-riga);
+}
+.cambio summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--attenuato);
+  min-height: 26px;
+}
+.cambio summary:hover {
+  color: var(--inchiostro);
+}
+.cambio .riga {
+  background: transparent;
+  padding: 4px 0;
+}
+.errore-riga.riuscito {
+  background: #1d2a1d;
+  color: #a5e2a5;
+}

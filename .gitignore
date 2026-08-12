@@ -3,8 +3,6 @@ dist/
 prove/uscita/
 prove/schermate/
 
-# Configurazione del server: mai nel repository, mai caricata.
-api/config.php
-
 # Script di avvio generati: contengono la password del database in chiaro.
 .avvio/
+

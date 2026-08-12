@@ -8,7 +8,10 @@
 <html lang="it">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Apri DWG — Stefano Fostinelli</title>
     <meta
       name="description"
@@ -41,14 +44,30 @@
       </div>
 
       <div class="comandi">
-        <button type="button" class="comando primario" id="btn-apri">Apri un disegno</button>
-        <button type="button" class="comando" id="btn-tutto" disabled title="Inquadra tutto (tasto Z)">
+        <button type="button" class="comando primario" id="btn-apri">
+          Apri un disegno
+        </button>
+        <button
+          type="button"
+          class="comando"
+          id="btn-tutto"
+          disabled
+          title="Inquadra tutto (tasto Z)"
+        >
           Inquadra tutto
         </button>
-        <button type="button" class="comando" id="btn-fondo" disabled aria-pressed="false">
+        <button
+          type="button"
+          class="comando"
+          id="btn-fondo"
+          disabled
+          aria-pressed="false"
+        >
           Fondo bianco
         </button>
-        <button type="button" class="comando primario" id="btn-pdf" disabled>Converti in PDF</button>
+        <button type="button" class="comando primario" id="btn-pdf" disabled>
+          Converti in PDF
+        </button>
         <button type="button" class="comando" id="btn-accedi">Accedi</button>
       </div>
       <input type="file" id="file" accept=".dwg,.dxf" hidden />
@@ -70,8 +89,12 @@
         <section class="blocco" hidden id="sez-layer">
           <h2>
             Layer
-            <button type="button" class="mini" id="btn-layer-tutti">tutti</button>
-            <button type="button" class="mini" id="btn-layer-nessuno">nessuno</button>
+            <button type="button" class="mini" id="btn-layer-tutti">
+              tutti
+            </button>
+            <button type="button" class="mini" id="btn-layer-nessuno">
+              nessuno
+            </button>
           </h2>
           <div class="elenco layer" id="layer"></div>
         </section>
@@ -80,16 +103,16 @@
           <h2>Rapporto di lettura</h2>
           <dl class="rapporto" id="rapporto"></dl>
           <p class="nota">
-            È un'anteprima di lettura: non sostituisce il CAD. Quello che non si è
-            potuto disegnare è scritto qui sopra, non nascosto.
+            È un'anteprima di lettura: non sostituisce il CAD. Quello che non si
+            è potuto disegnare è scritto qui sopra, non nascosto.
           </p>
         </section>
 
         <section class="blocco bloccate" id="sez-bloccate">
           <h2>Funzioni su richiesta</h2>
           <p class="nota">
-            Queste servono un accesso. Non c'è una registrazione automatica: mi
-            scrivi, ci parliamo, e l'account te lo creo io.
+            Per Utilizzare le funzioni specializzate contattare l'amministratore
+            del sito cliccando su una di esse
           </p>
           <div class="elenco" id="bloccate"></div>
         </section>
@@ -106,12 +129,17 @@
               viene caricato su nessun server, non passa da internet e non resta
               da nessuna parte. Chiudendo la pagina sparisce.
             </p>
-            <button type="button" class="comando primario grande" id="btn-apri-2">
+            <button
+              type="button"
+              class="comando primario grande"
+              id="btn-apri-2"
+            >
               Scegli un file
             </button>
             <p class="minuta">
               Si leggono i DWG dalla versione r13 (1994) alla r2018, e i DXF.<br />
-              La prima apertura di un DWG scarica il lettore: 2,3 MB, una volta sola.
+              La prima apertura di un DWG scarica il lettore: 2,3 MB, una volta
+              sola.
             </p>
           </div>
         </div>
@@ -133,10 +161,10 @@
         <div class="info" id="info" data-aperto="false">
           <div class="info-testo" id="info-testo">
             <p>
-              <strong>Il disegno non lascia il tuo computer.</strong> Si apre qui
-              dentro, nel browser: non viene caricato su nessun server, non passa
-              da internet e non resta da nessuna parte. Chiudendo la pagina
-              sparisce. Nessun account, nessun cookie di profilazione.
+              <strong>Il disegno non lascia il tuo computer.</strong> Si apre
+              qui dentro, nel browser: non viene caricato su nessun server, non
+              passa da internet e non resta da nessuna parte. Chiudendo la
+              pagina sparisce. Nessun account, nessun cookie di profilazione.
             </p>
             <p>
               È un'anteprima di lettura, non sostituisce il CAD: quello che non
@@ -146,8 +174,14 @@
             <p class="info-licenza">
               Usa <strong>GNU LibreDWG</strong> ed è software libero sotto
               licenza <a href="./LICENSE">GPL-3.0</a>.
-              <a href="https://github.com/LizAren/apri-dwg">Sorgente di questa pagina</a> ·
-              <a href="https://github.com/LibreDWG/libredwg">sorgente di LibreDWG</a> ·
+              <a href="https://github.com/LizAren/apri-dwg"
+                >Sorgente di questa pagina</a
+              >
+              ·
+              <a href="https://github.com/LibreDWG/libredwg"
+                >sorgente di LibreDWG</a
+              >
+              ·
               <a href="../index.html">Stefano Fostinelli</a>
             </p>
           </div>
@@ -204,14 +238,21 @@
 
         <div class="riga interruttori">
           <label><input type="checkbox" id="pdf-mono" /> tutto in nero</label>
-          <label><input type="checkbox" id="pdf-piede" checked /> piè di pagina con la scala</label>
+          <label
+            ><input type="checkbox" id="pdf-piede" checked /> piè di pagina con
+            la scala</label
+          >
         </div>
 
         <p class="nota" id="pdf-nota"></p>
 
         <div class="finestra-comandi">
-          <button type="button" class="comando" id="pdf-annulla">Annulla</button>
-          <button type="button" class="comando primario" id="pdf-fai">Genera il PDF</button>
+          <button type="button" class="comando" id="pdf-annulla">
+            Annulla
+          </button>
+          <button type="button" class="comando primario" id="pdf-fai">
+            Genera il PDF
+          </button>
         </div>
       </form>
     </dialog>
@@ -222,20 +263,23 @@
         <h2 id="accesso-titolo">Accesso su richiesta</h2>
         <p id="accesso-testo"></p>
         <p class="nota">
-          Non c'è un modulo di iscrizione e non c'è un pagamento automatico:
-          gli account li creo a mano, uno alla volta. Scrivimi cosa ti serve e
-          ti rispondo io.
+          Non c'è un modulo di iscrizione e non c'è un pagamento automatico: gli
+          account li creo a mano, uno alla volta. Scrivimi cosa ti serve e ti
+          rispondo io.
         </p>
         <div class="recapiti">
-          <a class="comando primario" id="accesso-mail" href="#">Scrivimi una mail</a>
+          <a class="comando primario" id="accesso-mail" href="#"
+            >Scrivimi una mail</a
+          >
           <a class="comando" href="tel:+393453101941">+39 345 3101941</a>
         </div>
         <div class="finestra-comandi">
-          <button type="button" class="comando" id="accesso-chiudi">Chiudi</button>
+          <button type="button" class="comando" id="accesso-chiudi">
+            Chiudi
+          </button>
         </div>
       </div>
     </dialog>
-
 
     <!-- Accesso ------------------------------------------------------------ -->
     <dialog class="finestra" id="finestra-accedi">
@@ -245,30 +289,75 @@
         <div id="accedi-modulo">
           <p class="nota">
             Gli account non si creano da qui: li crea l'amministratore. Se ti
-            serve l'accesso, clicca una delle funzioni col lucchetto e scrivimi.
+            serve l'accesso, clicca una delle funzioni col lucchetto.
           </p>
           <div class="riga">
             <label for="accedi-nome">Nome utente</label>
-            <input class="campo" type="text" id="accedi-nome" autocomplete="username" />
+            <input
+              class="campo"
+              type="text"
+              id="accedi-nome"
+              autocomplete="username"
+            />
           </div>
           <div class="riga">
             <label for="accedi-password">Password</label>
-            <input class="campo" type="password" id="accedi-password" autocomplete="current-password" />
+            <input
+              class="campo"
+              type="password"
+              id="accedi-password"
+              autocomplete="current-password"
+            />
           </div>
           <p class="errore-riga" id="accedi-errore" hidden></p>
         </div>
 
         <div id="accedi-dentro" hidden>
           <p id="accedi-funzioni"></p>
+
+          <details class="cambio">
+            <summary>Cambia la password</summary>
+            <div class="riga">
+              <label for="pw-vecchia">Password attuale</label>
+              <input
+                class="campo"
+                type="password"
+                id="pw-vecchia"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="riga">
+              <label for="pw-nuova">Password nuova</label>
+              <input
+                class="campo"
+                type="password"
+                id="pw-nuova"
+                autocomplete="new-password"
+              />
+            </div>
+            <p class="nota">
+              Almeno 10 caratteri. Cambiandola si chiudono tutte le altre
+              sessioni: è metà del motivo per cui la si cambia.
+            </p>
+            <p class="errore-riga" id="pw-esito" hidden></p>
+            <button type="button" class="comando" id="pw-fai">Cambia</button>
+          </details>
+
           <div class="recapiti">
-            <button type="button" class="comando" id="accedi-admin" hidden>Gestisci gli account</button>
+            <button type="button" class="comando" id="accedi-admin" hidden>
+              Gestisci gli account
+            </button>
             <button type="button" class="comando" id="accedi-esci">Esci</button>
           </div>
         </div>
 
         <div class="finestra-comandi">
-          <button type="button" class="comando" id="accedi-chiudi">Chiudi</button>
-          <button type="button" class="comando primario" id="accedi-fai">Entra</button>
+          <button type="button" class="comando" id="accedi-chiudi">
+            Chiudi
+          </button>
+          <button type="button" class="comando primario" id="accedi-fai">
+            Entra
+          </button>
         </div>
       </div>
     </dialog>
@@ -284,15 +373,24 @@
 
         <div class="riga">
           <label for="admin-nuovo">Nuovo account</label>
-          <input class="campo" type="text" id="admin-nuovo" placeholder="nome.utente" />
-          <button type="button" class="comando primario" id="admin-crea">Crea</button>
+          <input
+            class="campo"
+            type="text"
+            id="admin-nuovo"
+            placeholder="nome.utente"
+          />
+          <button type="button" class="comando primario" id="admin-crea">
+            Crea
+          </button>
         </div>
 
         <div id="admin-password" class="password-mostrata" hidden></div>
         <div id="admin-elenco" class="conti"></div>
 
         <div class="finestra-comandi">
-          <button type="button" class="comando" id="admin-chiudi">Chiudi</button>
+          <button type="button" class="comando" id="admin-chiudi">
+            Chiudi
+          </button>
         </div>
       </div>
     </dialog>

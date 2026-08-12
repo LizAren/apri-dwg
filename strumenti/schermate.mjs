@@ -244,72 +244,22 @@ async function schermo(p, x, y) {
   return [r.x + r.w / 2 + (x - 250) * zoom, r.y + r.h / 2 - (y - 230) * zoom]
 }
 
-await schermata('11-misura', SCRIVANIA, async (p) => {
-  await apri(p, 'prova-geometria.dxf')
-  await p.click('.attrezzo-tasto')
-  const a = await schermo(p, 0, 0)
-  const b = await schermo(p, 100, 0)
-  await p.mouse.click(a[0], a[1])
-  await p.mouse.move(b[0], b[1])
-  await p.mouse.click(b[0], b[1])
-  await p.waitForTimeout(300)
-  const voci = await p.evaluate(() =>
-    [...document.querySelectorAll('#strumento-esito dt')].map((d, i) =>
-      [d.textContent, document.querySelectorAll('#strumento-esito dd')[i].textContent])
-  )
-  const m = Object.fromEntries(voci)
-  // 🔴 La linea è lunga 100 mm: se l'aggancio agli estremi funziona la misura
-  // dev'essere esattamente 10 cm, non «circa».
-  if (m.distanza !== '10 cm') problemi.push(`11: distanza ${m.distanza}, attesa 10 cm`)
-  if (m.angolo !== '0.00°' && m.angolo !== '360.00°') problemi.push(`11: angolo ${m.angolo}, atteso 0`)
-  if (!/estremo/.test(m.agganci || '')) problemi.push(`11: non ha agganciato gli estremi (${m.agganci})`)
-  return { nota: `distanza ${m.distanza} · angolo ${m.angolo} · agganci ${m.agganci}` }
-}, '?f=tutte')
-
-await schermata('12-proprieta', SCRIVANIA, async (p) => {
-  await apri(p, 'prova-geometria.dxf')
-  const tasti = await p.$$('.attrezzo-tasto')
-  await tasti[1].click()
-  const meta = await schermo(p, 50, 0)
-  await p.mouse.click(meta[0], meta[1])
-  await p.waitForTimeout(300)
-  const voci = await p.evaluate(() =>
-    [...document.querySelectorAll('#strumento-esito dt')].map((d, i) =>
-      [d.textContent, document.querySelectorAll('#strumento-esito dd')[i].textContent])
-  )
-  const m = Object.fromEntries(voci)
-  if (m.tipo !== 'LINE') problemi.push(`12: tipo ${m.tipo}, atteso LINE`)
-  if (m.layer !== 'MURI') problemi.push(`12: layer ${m.layer}, atteso MURI`)
-  if (m.lunghezza !== '10 cm') problemi.push(`12: lunghezza ${m.lunghezza}, attesa 10 cm`)
-  return { nota: `${m.tipo} su ${m.layer}, lunga ${m.lunghezza}` }
-}, '?f=tutte')
-
-await schermata('13-cerca', SCRIVANIA, async (p) => {
-  await apri(p, 'prova-geometria.dxf')
-  const tasti = await p.$$('.attrezzo-tasto')
-  await tasti[2].click()
-  await p.fill('#cerca-campo', 'prova')
-  await p.waitForTimeout(300)
-  const n = await p.evaluate(() => document.querySelectorAll('.esito-riga').length)
-  if (n !== 1) problemi.push(`13: trovati ${n} testi, atteso 1`)
-  if (n) {
-    await p.click('.esito-riga')
-    await p.waitForTimeout(400)
-  }
-  return { nota: `${n} risultato/i, e il clic porta in vista` }
-}, '?f=tutte')
-
-await schermata('14-bloccate-restanti', SCRIVANIA, async (p) => {
+// ⚠️ Le prove degli strumenti (misura, proprietà, ricerca) NON stanno qui.
+// Servono un account, e l'accesso vive nella parte riservata: si provano in
+// `dwg-riservato/strumenti/prova-accesso.mjs`, con PHP e database veri. Qui si
+// verifica solo il caso senza account, che è quello che vede il pubblico.
+await schermata('11-senza-account', SCRIVANIA, async (p) => {
   await apri(p, 'prova-geometria.dxf')
   const r = await p.evaluate(() => ({
     strumenti: document.querySelectorAll('.attrezzo-tasto').length,
     bloccate: document.querySelectorAll('#bloccate .voce').length,
+    sezione: !document.getElementById('sez-strumenti').hidden,
   }))
-  // Le tre accese non devono comparire anche fra quelle da chiedere.
-  if (r.strumenti !== 3) problemi.push(`14: ${r.strumenti} strumenti accesi, attesi 3`)
-  if (r.bloccate !== 6) problemi.push(`14: ${r.bloccate} funzioni bloccate, attese 6`)
-  return { nota: `${r.strumenti} strumenti accesi, ${r.bloccate} ancora bloccate` }
-}, '?f=tutte')
+  if (r.strumenti !== 0) problemi.push(`11: ${r.strumenti} strumenti accesi senza account`)
+  if (r.bloccate !== 9) problemi.push(`11: ${r.bloccate} funzioni bloccate, attese 9`)
+  if (r.sezione) problemi.push('11: la sezione Strumenti è visibile senza account')
+  return { nota: `${r.strumenti} strumenti, ${r.bloccate} bloccate, sezione ${r.sezione ? 'visibile' : 'nascosta'}` }
+})
 
 await browser.close()
 server.close()
