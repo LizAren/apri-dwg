@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { risolviInchiostro } from '../modello/colori.js'
+import { geometriaNota } from '../modello/note.js'
 
 /** Formati in millimetri, lato corto × lato lungo. */
 export const FORMATI = {
@@ -200,6 +201,39 @@ function disegnaSpazio(doc, modello, spazio, o) {
     }
     if (!salti.length) continue
     doc.lines(salti, x0, y0, [1, 1], p.pieno ? 'F' : 'S', p.chiusa)
+    disegnate++
+  }
+
+  // Le annotazioni si stampano DOPO il disegno, così restano leggibili sopra.
+  // Stessa geometria dello schermo: se il PDF se la ricalcolasse, la nuvola
+  // stampata non sarebbe quella vista.
+  for (const n of o.note || []) {
+    const altezza = (n.scala || 1) * 14
+    const { spezzate, testi } = geometriaNota(n, altezza)
+    doc.setDrawColor(n.colore)
+    doc.setTextColor(n.colore)
+    doc.setLineWidth(0.4)
+    for (const punti of spezzate) {
+      if (punti.length < 4) continue
+      const salti = []
+      let px = versoX(punti[0])
+      let py = versoY(punti[1])
+      const ix = px
+      const iy = py
+      for (let i = 2; i < punti.length; i += 2) {
+        const x = versoX(punti[i])
+        const y = versoY(punti[i + 1])
+        salti.push([x - px, y - py])
+        px = x
+        py = y
+      }
+      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+    }
+    for (const t of testi) {
+      const h = Math.max(2, t.altezza * k)
+      doc.setFontSize((h * 72) / 25.4)
+      doc.text(t.testo, versoX(t.x), versoY(t.y))
+    }
     disegnate++
   }
 

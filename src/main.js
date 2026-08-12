@@ -121,6 +121,7 @@ const strumenti = new Strumenti({
         larghezza: 3000,
         fondoChiaro: true,
         layerVisibili,
+        note: strumenti.noteQui(),
       })
       scarica(blob, base(modello) + `-${spazioAttivo.nome}.png`)
     },
@@ -197,6 +198,7 @@ async function apri(file) {
     disegnaRapporto()
     strumenti.perModello(modello)
     aggiornaPermessi()
+    await riprendiLavoro()
     $('benvenuto').hidden = true
     for (const b of ['btn-tutto', 'btn-fondo', 'btn-pdf']) $(b).disabled = false
   } catch (e) {
@@ -465,6 +467,7 @@ $('pdf-fai').addEventListener('click', async () => {
       monocromatico: $('pdf-mono').checked,
       piede: $('pdf-piede').checked,
       layerVisibili,
+      note: strumenti.noteQui(),
       mmPerUnitaSupposto: modello.unita.dichiarate
         ? null
         : UNITA[Number($('pdf-unita').value)].mm,
@@ -545,6 +548,63 @@ function aggiornaPermessi() {
 }
 
 const chiedi = collegaRichiesta($('finestra-accesso'))
+
+// ---------------------------------------------------------------------------
+//  Lavoro salvato e link condivisi
+//
+//  🔴 Un link condiviso NON porta con sé il disegno: porta le annotazioni e la
+//  vista. Chi lo riceve apre la SUA copia del file, e se l'impronta coincide il
+//  lavoro si posa sopra. Se non coincide glielo si dice, invece di applicare
+//  annotazioni a un disegno diverso — che sarebbe il modo peggiore di sbagliare.
+// ---------------------------------------------------------------------------
+
+let lavoroInAttesa = null
+
+async function riprendiLavoro() {
+  if (!modello?.impronta) return
+  if (lavoroInAttesa) {
+    if (lavoroInAttesa.impronta === modello.impronta) {
+      strumenti.applicaLavoro(lavoroInAttesa.dati)
+      mostraErrore(null)
+      lavoroInAttesa = null
+    } else {
+      mostraErrore(
+        `Questo non è il disegno del link: quello si chiama «${lavoroInAttesa.nome_file}». ` +
+        'Le annotazioni non sono state applicate.'
+      )
+    }
+    return
+  }
+  if (!accesso?.utente) return
+  try {
+    const { chiama } = await import('./interfaccia/accesso.js')
+    const r = await chiama(`lavori.php?action=carica&impronta=${modello.impronta}`)
+    if (r.lavoro) {
+      strumenti.applicaLavoro(r.lavoro.dati)
+      mostraErrore(`Ripreso il lavoro salvato il ${r.lavoro.aggiornato_il}.`)
+    }
+  } catch {
+    /* senza rete si guarda il disegno lo stesso */
+  }
+}
+
+async function apriLink() {
+  const token = new URLSearchParams(location.search).get('l')
+  if (!token) return
+  try {
+    const { chiama } = await import('./interfaccia/accesso.js')
+    const r = await chiama(`lavori.php?action=aperto&t=${encodeURIComponent(token)}`)
+    lavoroInAttesa = r.lavoro
+    mostraErrore(
+      `Link condiviso: apri il disegno «${r.lavoro.nome_file}» e le annotazioni ` +
+      'compariranno sopra. Il file non è stato condiviso, solo il lavoro.'
+    )
+  } catch (e) {
+    mostraErrore(e.message)
+  }
+}
+
+apriLink()
 
 const accesso = new Accesso({
   tasto: $('btn-accedi'),

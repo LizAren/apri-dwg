@@ -19,6 +19,16 @@ const VERSIONI_DWG = new Set([
   'AC1018', 'AC1021', 'AC1024', 'AC1027', 'AC1032',
 ])
 
+/** SHA-256 del file, in esadecimale. Non lascia il browser. */
+async function improntaDi(contenuto) {
+  try {
+    const somma = await crypto.subtle.digest('SHA-256', contenuto)
+    return [...new Uint8Array(somma)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  } catch {
+    return '' // contesto non sicuro: il salvataggio semplicemente non si offre
+  }
+}
+
 export function riconosci(contenuto) {
   const testa = new Uint8Array(contenuto.slice(0, 6))
   const sigla = String.fromCharCode(...testa)
@@ -35,6 +45,10 @@ export function riconosci(contenuto) {
  */
 export async function apriFile(file, seProgresso) {
   const contenuto = await file.arrayBuffer()
+  // L'impronta del contenuto: serve a riconoscere lo STESSO disegno la volta
+  // dopo, senza che il disegno debba mai salire da nessuna parte. È il perno
+  // su cui regge il salvataggio del lavoro.
+  const impronta = await improntaDi(contenuto)
   const tipo = riconosci(contenuto)
 
   let fonte
@@ -62,6 +76,7 @@ export async function apriFile(file, seProgresso) {
 
   seProgresso?.('Preparo il disegno…')
   const modello = normalizza(fonte)
+  modello.impronta = impronta
 
   // I font SHX si scoprono qui, dove si conoscono gli stili usati.
   for (const s of fonte.stili || []) {

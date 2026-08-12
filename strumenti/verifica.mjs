@@ -17,6 +17,7 @@ import { leggiDxf } from '../src/lettura/dxf.js'
 import { normalizza, calcolaEstensione } from '../src/modello/normalizza.js'
 import { esportaPdf, esportaPdfMultiplo, eNormalizzata } from '../src/esporta/pdf.js'
 import { esportaDxf } from '../src/esporta/dxf.js'
+import { confronta } from '../src/modello/confronto.js'
 
 const QUI = dirname(fileURLToPath(import.meta.url))
 const RADICE = join(QUI, '..')
@@ -224,6 +225,31 @@ for (const nome of elenco) {
     } catch (e) {
       controlla(`${nome}: tutte le tavole in un PDF solo`, false, e.message)
     }
+  }
+
+  // 🔴 Confronto: un disegno con SÉ STESSO deve dare zero differenze. È il solo
+  // controllo che non può mentire — se l'impronta geometrica fosse instabile
+  // (arrotondamenti, ordine dei punti) qui salterebbe fuori subito.
+  {
+    const uguale = confronta(modelloSpazio, modelloSpazio)
+    controlla(
+      `${nome}: confronto con sé stesso = nessuna differenza`,
+      uguale.tolte === 0 && uguale.aggiunte === 0 && uguale.uguali === primitive.filter((p) => p.tipo !== 'vista').length,
+      `${uguale.uguali} invariate, ${uguale.tolte} tolte, ${uguale.aggiunte} aggiunte`
+    )
+
+    // E togliendo una primitiva, il confronto deve accorgersene: né una in più
+    // né una in meno.
+    const monco = {
+      ...modelloSpazio,
+      primitive: modelloSpazio.primitive.filter((p) => p.tipo !== 'vista').slice(1),
+    }
+    const diff = confronta(modelloSpazio, monco)
+    controlla(
+      `${nome}: confronto accorge di una primitiva mancante`,
+      diff.tolte === 1 && diff.aggiunte === 0,
+      `${diff.tolte} tolte, ${diff.aggiunte} aggiunte`
+    )
   }
 
   const layout = modello.spazi.filter((s) => s.carta)

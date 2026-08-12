@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { risolviInchiostro } from '../modello/colori.js'
+import { geometriaNota } from '../modello/note.js'
 
 /** Una coppia codice/valore, che è tutto ciò di cui è fatto un DXF. */
 const c = (codice, valore) => `${codice}\n${valore}\n`
@@ -160,6 +161,27 @@ export async function esportaPng(spazio, opzioni = {}) {
     if (g.pieno) ctx.fill()
     else ctx.stroke()
   }
+
+  // Le annotazioni, con la stessa geometria dello schermo e del PDF.
+  for (const n of opzioni.note || []) {
+    const { spezzate, testi: tn } = geometriaNota(n, (n.scala || 1) * 14)
+    ctx.strokeStyle = n.colore
+    ctx.fillStyle = n.colore
+    ctx.lineWidth = Math.max(2, larghezza / 900)
+    for (const punti of spezzate) {
+      if (punti.length < 4) continue
+      ctx.beginPath()
+      ctx.moveTo(ax(punti[0]), ay(punti[1]))
+      for (let k = 2; k < punti.length; k += 2) ctx.lineTo(ax(punti[k]), ay(punti[k + 1]))
+      ctx.stroke()
+    }
+    for (const t of tn) {
+      const h = Math.max(10, t.altezza * zoom)
+      ctx.font = `600 ${h.toFixed(1)}px "Public Sans", system-ui, sans-serif`
+      ctx.fillText(t.testo, ax(t.x), ay(t.y))
+    }
+  }
+  ctx.lineWidth = Math.max(1, larghezza / 1600)
 
   ctx.textBaseline = 'alphabetic'
   for (const t of testi) {

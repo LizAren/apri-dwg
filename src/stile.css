@@ -1114,3 +1114,30 @@ code.password {
 .bloccate .voce.accesa[aria-pressed='true'] .attrezzo {
   color: #fff;
 }
+
+/* --- Annotazioni ---------------------------------------------------------- */
+
+.scelte {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.mini[aria-pressed='true'] {
+  background: var(--blu);
+  color: #fff;
+}
+.pastiglia-colore {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pastiglia);
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.pastiglia-colore[aria-pressed='true'] {
+  border-color: var(--inchiostro);
+}
+.esito-riga .mini {
+  flex: none;
+}

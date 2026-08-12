@@ -17,12 +17,12 @@
  * `api/bootstrap.php`, che è l'unico posto dove conta davvero, perché il
  * server scarta quello che non riconosce.
  */
-export const ASSEGNABILI = ['misura', 'proprieta', 'cerca', 'blocchi', 'tavole', 'dxf']
+export const ASSEGNABILI = ['misura', 'proprieta', 'cerca', 'blocchi', 'tavole', 'dxf', 'note', 'confronto', 'salva']
 
 const BASE = './api'
 const CHIAVE_TOKEN = 'dwg-token'
 
-async function chiama(percorso, opzioni = {}) {
+export async function chiama(percorso, opzioni = {}) {
   const token = localStorage.getItem(CHIAVE_TOKEN)
   const risposta = await fetch(`${BASE}/${percorso}`, {
     ...opzioni,
