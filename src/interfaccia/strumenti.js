@@ -50,6 +50,9 @@ export class Strumenti {
     this.punti = [] // misura
     this.note = new Map() // annotazioni, per spazio
     this.notaInCorso = null
+    this.creazioneArmata = false
+    this.notaScelta = -1
+    this.trascina = null
     this.spazioPrima = null
     this.tipoNota = 'nuvola'
     this.coloreNota = COLORI_NOTA.rosso
@@ -134,15 +137,38 @@ export class Strumenti {
       giu = { x: e.clientX, y: e.clientY }
       if (this.attivo !== 'note') return
       const [x, y] = this._punto(e)
-      if (this.tipoNota === 'testo') return
-      // Nuvola e freccia si tirano: si tiene fermo il primo punto e si segue
-      // il dito fino a quando si lascia.
-      this.notaInCorso = {
-        tipo: this.tipoNota,
-        colore: this.coloreNota,
-        punti: [x, y, x, y],
-        scala: 1 / this.tela.zoom,
+
+      // 🔴 Si crea SOLO dopo aver premuto «Nuova». Prima ogni clic sul disegno
+      // lasciava un'annotazione, e bastava sbagliare mira per riempire la
+      // tavola di nuvole da cancellare a una a una.
+      if (this.creazioneArmata) {
+        if (this.tipoNota === 'testo') return
+        this.notaInCorso = {
+          tipo: this.tipoNota,
+          colore: this.coloreNota,
+          punti: [x, y, x, y],
+          scala: 1 / this.tela.zoom,
+        }
+        this.tela.panBloccato = true
+        return
       }
+
+      // Senza armare: si sceglie, si sposta, si ridimensiona.
+      const tolleranza = 9 / this.tela.zoom
+      const maniglia = this._manigliaSotto(x, y, tolleranza)
+      if (maniglia) {
+        this.trascina = { tipo: 'maniglia', ...maniglia, da: [x, y] }
+        this.tela.panBloccato = true
+        return
+      }
+      const quale = this._notaSotto(x, y, tolleranza)
+      this.notaScelta = quale
+      if (quale >= 0) {
+        this.trascina = { tipo: 'sposta', indice: quale, da: [x, y] }
+        this.tela.panBloccato = true
+      }
+      this._scriviEsito()
+      this.tela.ridisegna()
     })
 
     c.addEventListener('pointermove', (e) => {
@@ -152,6 +178,33 @@ export class Strumenti {
         this.notaInCorso.punti[3] = y
         this.tela.ridisegna()
         return
+      }
+      if (this.attivo === 'note' && this.trascina) {
+        const [x, y] = this._punto(e)
+        const n = this.noteQui()[this.trascina.indice]
+        if (!n) return
+        if (this.trascina.tipo === 'sposta') {
+          const dx = x - this.trascina.da[0]
+          const dy = y - this.trascina.da[1]
+          for (let i = 0; i < n.punti.length; i += 2) {
+            n.punti[i] += dx
+            n.punti[i + 1] += dy
+          }
+          this.trascina.da = [x, y]
+        } else {
+          n.punti[this.trascina.vertice * 2] = x
+          n.punti[this.trascina.vertice * 2 + 1] = y
+        }
+        this.tela.ridisegna()
+        return
+      }
+      // Con lo strumento acceso e niente in mano, il puntatore dice cosa
+      // succederebbe: freccia sulle maniglie, mano sulle note.
+      if (this.attivo === 'note' && !this.creazioneArmata) {
+        const [x, y] = this._punto(e)
+        const t = 9 / this.tela.zoom
+        const sopra = this._manigliaSotto(x, y, t) || this._notaSotto(x, y, t) >= 0
+        this.tela.canvas.style.cursor = sopra ? 'move' : 'default'
       }
       if (!this.attivo || this.attivo === 'cerca') return
       const [x, y] = this._punto(e)
@@ -174,22 +227,33 @@ export class Strumenti {
 
       if (this.attivo === 'note') {
         const [x, y] = this._punto(e)
+        if (this.trascina) {
+          this.trascina = null
+          this.tela.panBloccato = false
+          this._scriviEsito()
+          return
+        }
         if (this.notaInCorso) {
           const n = this.notaInCorso
           this.notaInCorso = null
+          this.tela.panBloccato = false
           // Un trascinamento troppo corto è un clic andato storto, non una nota.
           if (mosso > 6) {
             this.noteQui().push(n)
+            this.notaScelta = this.noteQui().length - 1
+            this.creazioneArmata = false // una premuta, una nota
             this._scriviEsito()
           }
           this.tela.ridisegna()
-        } else if (this.tipoNota === 'testo' && mosso <= 4) {
+        } else if (this.creazioneArmata && this.tipoNota === 'testo' && mosso <= 4) {
           const testo = prompt('Testo della nota:')
           if (testo) {
             this.noteQui().push({
               tipo: 'testo', colore: this.coloreNota, testo,
               punti: [x, y], scala: 1 / this.tela.zoom,
             })
+            this.notaScelta = this.noteQui().length - 1
+            this.creazioneArmata = false
             this._scriviEsito()
             this.tela.ridisegna()
           }
@@ -204,7 +268,22 @@ export class Strumenti {
     })
 
     document.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea, select')) return
+      if (this.attivo === 'note' && (e.key === 'Delete' || e.key === 'Backspace')) {
+        if (this.notaScelta >= 0) {
+          this.noteQui().splice(this.notaScelta, 1)
+          this.notaScelta = -1
+          this._scriviEsito()
+          this.tela.ridisegna()
+        }
+        return
+      }
       if (e.key !== 'Escape' || !this.attivo) return
+      if (this.creazioneArmata) {
+        this.creazioneArmata = false
+        this._scriviEsito()
+        return
+      }
       if (this.punti.length) {
         this.punti = []
         this._scriviEsito()
@@ -400,8 +479,30 @@ export class Strumenti {
 
     // Le annotazioni si vedono sempre, non solo con lo strumento acceso: sono
     // parte del lavoro, non un'anteprima.
-    for (const n of this.noteQui()) this._disegnaNota(ctx, n)
+    const note = this.noteQui()
+    for (const n of note) this._disegnaNota(ctx, n)
     if (this.notaInCorso) this._disegnaNota(ctx, this.notaInCorso)
+
+    // La nota scelta mostra le sue maniglie: sono l'unico modo per capire che
+    // si può afferrare, e dove.
+    if (this.attivo === 'note' && this.notaScelta >= 0 && note[this.notaScelta]) {
+      const n = note[this.notaScelta]
+      ctx.save()
+      ctx.strokeStyle = '#ffffff'
+      ctx.fillStyle = '#12161c'
+      ctx.lineWidth = 1.6
+      for (const m of this._maniglie(n)) {
+        const [sx, sy] = this.tela.aSchermo(m.x, m.y)
+        ctx.fillRect(sx - 5, sy - 5, 10, 10)
+        ctx.strokeRect(sx - 5, sy - 5, 10, 10)
+      }
+      if (n.tipo === 'testo') {
+        const [sx, sy] = this.tela.aSchermo(n.punti[0], n.punti[1])
+        ctx.fillRect(sx - 5, sy - 5, 10, 10)
+        ctx.strokeRect(sx - 5, sy - 5, 10, 10)
+      }
+      ctx.restore()
+    }
 
     if (this.evidenziata) this._contorna(ctx, this.evidenziata, chiaro ? '#0b5fa5' : blu)
     if (this.selezionata) this._contorna(ctx, this.selezionata, '#e8b93c')
@@ -441,6 +542,76 @@ export class Strumenti {
       this._etichetta(ctx, sx + 34, sy - 14, NOMI_AGGANCIO[this.agganciato.tipo], '#7bd88f')
       ctx.restore()
     }
+  }
+
+  /**
+   * Le maniglie di un'annotazione, in coordinate del disegno.
+   * La nuvola si tira dagli angoli, la freccia dalle due punte, il testo non
+   * si ridimensiona: si sposta e basta.
+   */
+  _maniglie(n) {
+    if (n.tipo === 'nuvola') {
+      const [x0, y0, x1, y1] = n.punti
+      // Gli indici sono quelli dei DUE punti memorizzati: trascinando l'angolo
+      // in alto a destra si muove x del secondo e y del primo.
+      return [
+        { x: x0, y: y0, vertice: 0, coppia: [0, 1] },
+        { x: x1, y: y1, vertice: 1, coppia: [2, 3] },
+      ]
+    }
+    if (n.tipo === 'freccia') {
+      return [
+        { x: n.punti[0], y: n.punti[1], vertice: 0 },
+        { x: n.punti[2], y: n.punti[3], vertice: 1 },
+      ]
+    }
+    return []
+  }
+
+  _manigliaSotto(x, y, tolleranza) {
+    const note = this.noteQui()
+    // Solo la nota scelta mostra le maniglie: altrimenti su un disegno pieno
+    // di annotazioni si aggancerebbe sempre quella sbagliata.
+    if (this.notaScelta < 0 || !note[this.notaScelta]) return null
+    const n = note[this.notaScelta]
+    for (const m of this._maniglie(n)) {
+      if (Math.hypot(m.x - x, m.y - y) <= tolleranza) {
+        return { indice: this.notaScelta, vertice: m.vertice }
+      }
+    }
+    return null
+  }
+
+  _notaSotto(x, y, tolleranza) {
+    const note = this.noteQui()
+    // Dall'ultima alla prima: si prende quella disegnata sopra, che è quella
+    // che l'occhio vede.
+    for (let i = note.length - 1; i >= 0; i--) {
+      const n = note[i]
+      if (n.tipo === 'testo') {
+        const h = (n.scala || 1 / this.tela.zoom) * 14
+        const largo = (n.testo || '').length * h * 0.6
+        if (x >= n.punti[0] - h && x <= n.punti[0] + largo && y >= n.punti[1] - h && y <= n.punti[1] + h) return i
+        continue
+      }
+      const [ax, ay, bx, by] = n.punti
+      if (n.tipo === 'nuvola') {
+        const minx = Math.min(ax, bx) - tolleranza
+        const maxx = Math.max(ax, bx) + tolleranza
+        const miny = Math.min(ay, by) - tolleranza
+        const maxy = Math.max(ay, by) + tolleranza
+        if (x >= minx && x <= maxx && y >= miny && y <= maxy) return i
+        continue
+      }
+      // freccia: vicinanza all'asta
+      const dx = bx - ax
+      const dy = by - ay
+      const len2 = dx * dx + dy * dy || 1
+      let t = ((x - ax) * dx + (y - ay) * dy) / len2
+      t = Math.max(0, Math.min(1, t))
+      if (Math.hypot(x - (ax + t * dx), y - (ay + t * dy)) <= tolleranza * 1.5) return i
+    }
+    return -1
   }
 
   _disegnaNota(ctx, n) {
@@ -696,7 +867,17 @@ export class Strumenti {
           )
           .join('') +
         '</div>' +
-        `<p class="nota">🔴 Le annotazioni non toccano il disegno: restano ` +
+        `<button type="button" class="comando ${this.creazioneArmata ? 'primario' : ''}" ` +
+        `id="nota-nuova">${this.creazioneArmata ? 'Annulla' : 'Nuova annotazione'}</button>` +
+        `<p class="nota">${
+          this.creazioneArmata
+            ? this.tipoNota === 'testo'
+              ? 'Clicca sul disegno dove vuoi la nota.'
+              : 'Trascina sul disegno per disegnarla.'
+            : 'Clicca un\'annotazione per sceglierla: si sposta trascinandola e si ' +
+              'ridimensiona dai quadratini. Canc la elimina.'
+        }</p>` +
+        `<p class="nota">Le annotazioni non toccano il disegno: restano ` +
         `accanto e finiscono nel PDF e nel PNG. Il DWG di partenza resta quello ` +
         `che era.</p>` +
         (note.length
@@ -704,7 +885,8 @@ export class Strumenti {
             note
               .map(
                 (n, i) =>
-                  `<div class="esito-riga"><span class="esito-testo">${
+                  `<div class="esito-riga${i === this.notaScelta ? ' scelta' : ''}" data-scegli="${i}">` +
+                  `<span class="esito-testo">${
                     sicuro(n.tipo === 'testo' ? n.testo : TIPI_NOTA[n.tipo])
                   }</span><button type="button" class="mini" data-togli="${i}">togli</button></div>`
               )
@@ -724,9 +906,25 @@ export class Strumenti {
           this._scriviEsito()
         })
       }
+      e.querySelector('#nota-nuova').addEventListener('click', () => {
+        this.creazioneArmata = !this.creazioneArmata
+        this.notaScelta = -1
+        this.tela.canvas.style.cursor = this.creazioneArmata ? 'crosshair' : 'default'
+        this._scriviEsito()
+        this.tela.ridisegna()
+      })
+      for (const r of e.querySelectorAll('[data-scegli]')) {
+        r.addEventListener('click', (ev) => {
+          if (ev.target.matches('[data-togli]')) return
+          this.notaScelta = +r.dataset.scegli
+          this._scriviEsito()
+          this.tela.ridisegna()
+        })
+      }
       for (const b of e.querySelectorAll('[data-togli]')) {
         b.addEventListener('click', () => {
           note.splice(+b.dataset.togli, 1)
+          this.notaScelta = -1
           this._scriviEsito()
           this.tela.ridisegna()
         })
@@ -745,7 +943,7 @@ export class Strumenti {
       const totale = conteggi.reduce((n, [, q]) => n + q, 0)
       e.innerHTML =
         `<p class="nota">${conteggi.length} blocchi diversi, ${totale} inserimenti in tutto. ` +
-        `⚠️ È un conteggio degli inserimenti, non un computo metrico: dice quante ` +
+        ` Segnala quante ` +
         `volte compare un blocco, non cosa contiene.</p>` +
         '<div class="cerca-esiti">' +
         conteggi
@@ -763,8 +961,7 @@ export class Strumenti {
       e.hidden = false
       const spazi = this.modello?.spazi || []
       e.innerHTML =
-        `<p class="nota">Una pagina per spazio, ognuna con la sua scala: due tavole ` +
-        `dello stesso file quasi mai stanno alla stessa.</p>` +
+        `<p class="nota">La generazione viene separata per pagina</p>` +
         '<div class="cerca-esiti">' +
         spazi
           .map(

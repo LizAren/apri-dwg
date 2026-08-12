@@ -35,6 +35,7 @@ export class Tela {
     this.daRidisegnare = false
     this.ultimoDisegnate = 0
     this.qualitaPiena = true
+    this.panBloccato = false
     this._collega()
     this._adatta()
     new ResizeObserver(() => this._adatta()).observe(canvas.parentElement || canvas)
@@ -239,6 +240,12 @@ export class Tela {
     })
 
     c.addEventListener('pointermove', (e) => {
+      // 🔴 Se uno strumento ha preso il trascinamento — sta disegnando,
+      // spostando o ridimensionando un'annotazione — la vista NON si muove.
+      // Senza questo, spostare una nota faceva scorrere anche il disegno sotto,
+      // e la nota sembrava restare ferma mentre in realtà si muovevano
+      // entrambi.
+      if (this.panBloccato) return
       if (!trascina) return
       const dx = e.clientX - trascina.x
       const dy = e.clientY - trascina.y

@@ -1141,3 +1141,11 @@ code.password {
 .esito-riga .mini {
   flex: none;
 }
+
+.esito-riga.scelta {
+  background: var(--carta-alta);
+  color: var(--inchiostro);
+}
+.esito-riga[data-scegli] {
+  cursor: pointer;
+}
