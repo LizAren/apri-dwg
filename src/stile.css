@@ -1086,3 +1086,31 @@ code.password {
   background: #1d2a1d;
   color: #a5e2a5;
 }
+
+/* --- Elenco unico delle funzioni ------------------------------------------ */
+
+/* Accesa: SOLO la scritta azzurra. Niente fondo pieno — quello resta il segnale
+   di «strumento in uso adesso», e se lo prendessero anche le altre voci
+   smetterebbe di dire qualcosa. */
+.bloccate .voce.accesa {
+  color: var(--blu-chiaro);
+}
+.bloccate .voce.accesa .voce-nome {
+  font-weight: 600;
+}
+.bloccate .voce.accesa:hover:not(:disabled) {
+  background: var(--carta-alta);
+}
+/* Prima di aprire un disegno non c'è niente su cui usarle: restano azzurre,
+   ma spente. */
+.bloccate .voce.accesa:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.bloccate .voce.accesa[aria-pressed='true'] {
+  background: var(--blu);
+  color: #fff;
+}
+.bloccate .voce.accesa[aria-pressed='true'] .attrezzo {
+  color: #fff;
+}

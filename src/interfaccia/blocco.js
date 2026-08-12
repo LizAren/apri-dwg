@@ -106,49 +106,43 @@ export const FUNZIONI = [
   },
 ]
 
-const LUCCHETTO = `<svg class="lucchetto" viewBox="0 0 24 24" fill="none"
+export const LUCCHETTO = `<svg class="lucchetto" viewBox="0 0 24 24" fill="none"
   stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
   stroke-linejoin="round" aria-hidden="true">
   <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
   <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
 </svg>`
 
+export const iconaDi = icona
+
 /**
- * Riempie l'elenco delle funzioni bloccate e collega il pannello di richiesta.
+ * Collega il pannello «accesso su richiesta» e restituisce la funzione da
+ * chiamare quando si clicca una voce col lucchetto.
+ *
+ * ⚠️ Prima questo modulo disegnava anche l'elenco. Ora l'elenco è UNO SOLO —
+ * accese e bloccate insieme, con due aspetti diversi — e lo disegna chi
+ * conosce lo stato degli strumenti. Due elenchi facevano comparire due volte
+ * la stessa funzione appena veniva accesa.
  */
-export function montaBloccate(contenitore, finestra, gia = []) {
-  const attive = new Set(gia)
-  // Si ridisegna da capo a ogni accesso o uscita: le voci accese spariscono da
-  // qui e ricompaiono fra gli strumenti.
-  contenitore.innerHTML = ''
+export function collegaRichiesta(finestra) {
   const titolo = finestra.querySelector('#accesso-titolo')
   const testo = finestra.querySelector('#accesso-testo')
   const mail = finestra.querySelector('#accesso-mail')
-
-  for (const f of FUNZIONI) {
-    // Una funzione già accesa non sta fra quelle da chiedere: comparirebbe due
-    // volte, una col lucchetto e una funzionante.
-    if (attive.has(f.id)) continue
-    const b = document.createElement('button')
-    b.type = 'button'
-    b.className = 'voce'
-    b.innerHTML = `${icona(f.id)}<span class="voce-nome">${f.nome}</span>${LUCCHETTO}`
-    b.setAttribute('aria-label', `${f.nome} — funzione su richiesta`)
-    b.addEventListener('click', () => {
-      titolo.textContent = f.nome
-      testo.textContent = `${maiuscola(f.che)}.`
-      const oggetto = encodeURIComponent(`Accesso alla funzione «${f.nome}» del visualizzatore DWG`)
-      const corpo = encodeURIComponent(
-        `Ciao Stefano,\n\nvorrei l'accesso alla funzione «${f.nome}» del visualizzatore DWG.\n\n` +
-        `Ti scrivo da:\nNome:\nAttività:\nA cosa mi serve:\n\nGrazie.`
-      )
-      mail.href = `mailto:${MAIL}?subject=${oggetto}&body=${corpo}`
-      finestra.showModal()
-    })
-    contenitore.appendChild(b)
-  }
-
   finestra.querySelector('#accesso-chiudi').addEventListener('click', () => finestra.close())
+
+  return (id) => {
+    const f = FUNZIONI.find((x) => x.id === id)
+    if (!f) return
+    titolo.textContent = f.nome
+    testo.textContent = `${maiuscola(f.che)}.`
+    const oggetto = encodeURIComponent(`Accesso alla funzione «${f.nome}» del visualizzatore DWG`)
+    const corpo = encodeURIComponent(
+      `Ciao Stefano,\n\nvorrei l'accesso alla funzione «${f.nome}» del visualizzatore DWG.\n\n` +
+      `Ti scrivo da:\nNome:\nAttività:\nA cosa mi serve:\n\nGrazie.`
+    )
+    mail.href = `mailto:${MAIL}?subject=${oggetto}&body=${corpo}`
+    finestra.showModal()
+  }
 }
 
 const maiuscola = (s) => s.charAt(0).toUpperCase() + s.slice(1)

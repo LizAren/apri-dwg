@@ -192,7 +192,7 @@ await schermata('10-info-aperto', SCRIVANIA, async (p) => {
 })
 
 await schermata('07-accesso', SCRIVANIA, async (p) => {
-  await p.click('#bloccate .voce')
+  await p.click('#strumenti .voce:not(.accesa)')
   await p.waitForTimeout(250)
 })
 
@@ -249,16 +249,25 @@ async function schermo(p, x, y) {
 // `dwg-riservato/strumenti/prova-accesso.mjs`, con PHP e database veri. Qui si
 // verifica solo il caso senza account, che è quello che vede il pubblico.
 await schermata('11-senza-account', SCRIVANIA, async (p) => {
-  await apri(p, 'prova-geometria.dxf')
-  const r = await p.evaluate(() => ({
-    strumenti: document.querySelectorAll('.attrezzo-tasto').length,
-    bloccate: document.querySelectorAll('#bloccate .voce').length,
-    sezione: !document.getElementById('sez-strumenti').hidden,
+  // 🔴 L'elenco delle funzioni si vede SUBITO, prima ancora di aprire un
+  // disegno: è lì che si capisce cosa offre la pagina. Senza account sono tutte
+  // e nove col lucchetto.
+  const prima = await p.evaluate(() => ({
+    voci: document.querySelectorAll('#strumenti .voce').length,
+    accese: document.querySelectorAll('#strumenti .voce.accesa').length,
+    lucchetti: document.querySelectorAll('#strumenti .lucchetto').length,
   }))
-  if (r.strumenti !== 0) problemi.push(`11: ${r.strumenti} strumenti accesi senza account`)
-  if (r.bloccate !== 9) problemi.push(`11: ${r.bloccate} funzioni bloccate, attese 9`)
-  if (r.sezione) problemi.push('11: la sezione Strumenti è visibile senza account')
-  return { nota: `${r.strumenti} strumenti, ${r.bloccate} bloccate, sezione ${r.sezione ? 'visibile' : 'nascosta'}` }
+  if (prima.voci !== 9) problemi.push(`11: ${prima.voci} funzioni in elenco prima del disegno, attese 9`)
+  if (prima.accese !== 0) problemi.push(`11: ${prima.accese} funzioni accese senza account`)
+  if (prima.lucchetti !== 9) problemi.push(`11: ${prima.lucchetti} lucchetti, attesi 9`)
+
+  await apri(p, 'prova-geometria.dxf')
+  const dopo = await p.evaluate(() => ({
+    voci: document.querySelectorAll('#strumenti .voce').length,
+    accese: document.querySelectorAll('#strumenti .voce.accesa').length,
+  }))
+  if (dopo.accese !== 0) problemi.push(`11: ${dopo.accese} funzioni accese senza account`)
+  return { nota: `prima del disegno ${prima.voci} voci tutte col lucchetto; dopo ${dopo.voci}` }
 })
 
 await browser.close()

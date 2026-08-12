@@ -1,5 +1,5 @@
 // ============================================================================
-//  I tre strumenti: misura, proprietà, ricerca testo.
+//  Gli strumenti: misura, proprietà, ricerca testo, blocchi, tavole, esporta.
 //
 //  Girano tutti nel browser, sui dati già in memoria: nessuna chiamata al
 //  server, nessun disegno che esce dal computer di chi lo apre.
@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { Indice, aggancia, colpisci, lunghezza, area, NOMI_AGGANCIO } from '../vista/aggancio.js'
+import { FUNZIONI, LUCCHETTO, iconaDi } from './blocco.js'
 
 /** Quanti pixel attorno al puntatore si guardano per agganciare. */
 const RAGGIO_PX = 16
@@ -23,7 +24,7 @@ export class Strumenti {
   /**
    * @param {object} opzioni  tela, contenitori del DOM, formattatore di misure
    */
-  constructor({ tela, elenco, esito, cambiato, formato, formatoArea, visibile, esporta }) {
+  constructor({ tela, elenco, esito, cambiato, formato, formatoArea, visibile, esporta, chiediAccesso }) {
     this.tela = tela
     this.elenco = elenco
     this.esito = esito
@@ -32,6 +33,7 @@ export class Strumenti {
     this.formatoArea = formatoArea
     this.visibile = visibile
     this.esporta = esporta || {}
+    this.chiediAccesso = chiediAccesso || (() => {})
     this.modello = null
 
     this.attivo = null
@@ -51,6 +53,7 @@ export class Strumenti {
   /** Il modello serve a chi mostra dati che non stanno nella geometria. */
   perModello(modello) {
     this.modello = modello
+    this._disegnaElenco()
   }
 
   /** Il disegno è cambiato: l'indice va rifatto, e le misure non valgono più. */
@@ -279,16 +282,34 @@ export class Strumenti {
   //  Pannello
   // -------------------------------------------------------------------------
 
+  /**
+   * UN elenco solo, con le nove funzioni sempre in vista — anche prima di aver
+   * aperto un disegno, perché è lì che si capisce cosa offre la pagina.
+   *
+   * Due aspetti e basta: quelle accese hanno la SCRITTA azzurra, quelle da
+   * chiedere sono grigie col lucchetto. Niente sfondo colorato sulle accese:
+   * il fondo pieno resta il segnale di «questo strumento è in uso adesso», e
+   * se lo prendessero anche le altre non direbbe più niente.
+   */
   _disegnaElenco() {
     this.elenco.innerHTML = ''
-    for (const s of ELENCO) {
-      if (!this.abilitate.has(s.id)) continue
+    for (const f of FUNZIONI) {
+      const accesa = this.abilitate.has(f.id)
       const b = document.createElement('button')
       b.type = 'button'
-      b.className = 'attrezzo-tasto'
-      b.setAttribute('aria-pressed', String(this.attivo === s.id))
-      b.innerHTML = `${s.icona}<span>${s.nome}</span>`
-      b.addEventListener('click', () => this.attiva(s.id))
+      if (accesa) {
+        b.className = 'voce accesa'
+        b.setAttribute('aria-pressed', String(this.attivo === f.id))
+        // Prima di aprire un disegno non c'è niente su cui usarle.
+        b.disabled = !this.modello
+        b.innerHTML = `${iconaDi(f.id)}<span class="voce-nome">${f.nome}</span>`
+        b.addEventListener('click', () => this.attiva(f.id))
+      } else {
+        b.className = 'voce'
+        b.setAttribute('aria-label', `${f.nome} — funzione su richiesta`)
+        b.innerHTML = `${iconaDi(f.id)}<span class="voce-nome">${f.nome}</span>${LUCCHETTO}`
+        b.addEventListener('click', () => this.chiediAccesso(f.id))
+      }
       this.elenco.appendChild(b)
     }
   }
@@ -482,51 +503,6 @@ const righe = (voci) =>
 const I = (d) =>
   `<svg class="attrezzo" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
   `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
-
-const ELENCO = [
-  {
-    id: 'misura',
-    nome: 'Misura',
-    icona: I('<path d="M3 9h18v6H3z"/><path d="M7.5 9v3M12 9v4M16.5 9v3"/>'),
-  },
-  {
-    id: 'proprieta',
-    nome: 'Proprietà',
-    icona: I(
-      '<path d="M3 4.5h9v9H3z"/><path d="M15.5 7h5.5M15.5 11h5.5M15.5 15h3.5"/>' +
-        '<path d="M12 13.5l4 6 1.2-2.6 2.6-1.2z" fill="currentColor"/>'
-    ),
-  },
-  {
-    id: 'cerca',
-    nome: 'Cerca testo',
-    icona: I(
-      '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L21 21"/>' +
-        '<path d="M7.8 9h5.4M7.8 12h3.4"/>'
-    ),
-  },
-  {
-    id: 'blocchi',
-    nome: 'Blocchi',
-    icona: I(
-      '<path d="M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7z"/>' +
-        '<path d="M13.5 13.5h7v7h-7z" stroke-dasharray="2.4 2.2"/>'
-    ),
-  },
-  {
-    id: 'tavole',
-    nome: 'Tutte le tavole',
-    icona: I('<path d="M3.5 6.5v14h11"/><path d="M8 3.5h8.5l4 4v13H8z"/><path d="M16.5 3.5v4h4"/>'),
-  },
-  {
-    id: 'dxf',
-    nome: 'Esporta',
-    icona: I(
-      '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>' +
-        '<path d="M12 10.5v6M9.4 14l2.6 2.6 2.6-2.6"/>'
-    ),
-  },
-]
 
 const sicuro = (t) =>
   String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch])

@@ -20,7 +20,7 @@ import { rapportoLeggibile } from './modello/normalizza.js'
 import { coloreLayer, risolviInchiostro } from './modello/colori.js'
 import { UNITA, SCELTE_UNITA } from './modello/unita.js'
 import { Tela } from './vista/tela.js'
-import { montaBloccate } from './interfaccia/blocco.js'
+import { collegaRichiesta } from './interfaccia/blocco.js'
 import { Strumenti } from './interfaccia/strumenti.js'
 import { Accesso } from './interfaccia/accesso.js'
 import { esportaPdf, esportaPdfMultiplo, SCALE } from './esporta/pdf.js'
@@ -95,6 +95,7 @@ const strumenti = new Strumenti({
   formato: formatoLunghezza,
   formatoArea,
   visibile: (layer) => layerVisibili.has(layer),
+  chiediAccesso: (id) => chiedi(id),
   esporta: {
     async pdfMultiplo(spazi) {
       try {
@@ -538,9 +539,9 @@ new ResizeObserver(() => {
 function aggiornaPermessi() {
   abilitate = accesso?.utente ? accesso.funzioni : []
   strumenti.abilita(abilitate)
-  $('sez-strumenti').hidden = !modello || abilitate.length === 0
-  montaBloccate($('bloccate'), $('finestra-accesso'), abilitate)
 }
+
+const chiedi = collegaRichiesta($('finestra-accesso'))
 
 const accesso = new Accesso({
   tasto: $('btn-accedi'),
