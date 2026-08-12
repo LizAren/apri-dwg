@@ -17,7 +17,8 @@ npm install
 npm run dev        # sviluppo, apre su localhost
 npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
 npm run verifica   # 66 controlli misurati sui file di prova
-node strumenti/schermate.mjs   # apre l'app in un browser vero e la fotografa
+node strumenti/schermate.mjs      # apre l'app in un browser vero e la fotografa
+node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
 ```
 
@@ -30,7 +31,9 @@ node strumenti/schermate.mjs   # apre l'app in un browser vero e la fotografa
 | `src/vista/` | la tela: Canvas 2D, spostamento, ingrandimento, layer |
 | `src/esporta/` | PDF vettoriale in millimetri, con la scala dichiarata |
 | `src/interfaccia/` | le funzioni bloccate e la richiesta di accesso |
-| `strumenti/` | `verifica.mjs` (misura la catena sui file veri) e `schermate.mjs` (guarda la pagina) |
+| `src/vista/aggancio.js` | indice spaziale, selezione e aggancio (estremo, centro, intersezione, medio) |
+| `api/` | PHP: accesso e account. 🔴 `config.php` non è qui e non si carica mai |
+| `strumenti/` | `verifica.mjs` (dati), `schermate.mjs` (pixel), `prova-accesso.mjs` (PHP e database veri), `prepara-avvio.mjs` (script usa e getta) |
 | `prove/file/` | quattro DWG veri (r2000, r2004, r2007, r2018) più un DXF a geometria nota |
 
 ## Le regole non negoziabili di questa cartella
@@ -54,11 +57,24 @@ node strumenti/schermate.mjs   # apre l'app in un browser vero e la fotografa
    annotazioni salvate a parte, export DXF o PDF. Detto in pagina.
 6. 🔴 **`api/config.php` non si carica MAI** sul server, e non compare in
    nessuno script di deploy.
-7. **Niente registrazione automatica.** Le funzioni avanzate si vedono
-   bloccate; chi clicca chiede l'accesso, e l'account lo crea l'amministratore.
-8. 🔴 **Quello che non si sa disegnare finisce nel rapporto di lettura**, non
-   sparisce. C'è una rete di sicurezza: se un tipo che dichiariamo di saper
-   disegnare non produce niente, viene contato lo stesso.
+7. **Niente registrazione automatica.** Non esiste nessun percorso, in nessun
+   verso, che permetta a chi passa di crearsi un account: li crea
+   l'amministratore. E **il `ruolo` non si accetta mai dal client** — un account
+   creato dall'API è sempre `utente`. Il primo amministratore nasce dallo
+   script usa e getta (`strumenti/prepara-avvio.mjs`), che si cancella da solo
+   e rifiuta di rifarlo se esiste già.
+8. 🔴 **Quello che si vede nell'interfaccia non è un permesso.** Il permesso lo
+   verifica il server a ogni chiamata. Chi si mette in tasca un `ruolo: admin`
+   nel browser ottiene un pannello vuoto che prende 403 su ogni pulsante —
+   verificato in `prova-accesso.mjs`.
+9. ⚠️ **Il blocco delle funzioni che girano nel browser è una scena, per
+   scelta.** Il codice è GPL-3 e sta sul computer di chi visita: chi sa
+   riaccendere un interruttore saprebbe riscriversi il visualizzatore. Serve a
+   dire cosa c'è e a far scrivere chi è interessato. Quello che il permesso
+   protegge davvero arriverà con le funzioni che stanno sul server.
+10. 🔴 **Quello che non si sa disegnare finisce nel rapporto di lettura**, non
+    sparisce. C'è una rete di sicurezza: se un tipo che dichiariamo di saper
+    disegnare non produce niente, viene contato lo stesso.
 
 ## Cose imparate qui, che non si indovinano
 

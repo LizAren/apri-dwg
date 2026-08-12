@@ -961,3 +961,104 @@ a {
     min-height: 44px;
   }
 }
+
+/* --- Accesso e account ---------------------------------------------------- */
+
+.comando.acceso {
+  background: var(--blu-scuro);
+  color: #fff;
+}
+
+.finestra.larga {
+  max-width: min(680px, calc(100vw - 32px));
+}
+
+.errore-riga {
+  margin: 4px 0 0;
+  padding: 9px 14px;
+  border-radius: var(--r-riga);
+  background: #3a2222;
+  color: #f2cccc;
+  font-size: 13px;
+}
+
+.conti {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 44vh;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+.conto {
+  padding: 12px 14px;
+  background: var(--carta-soffice);
+  border-radius: var(--r-riga);
+}
+.conto-testa {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.conto-ruolo {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.conto-funzioni {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.conto-funzioni label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--attenuato);
+  cursor: pointer;
+}
+.conto-funzioni input {
+  accent-color: var(--blu);
+  width: 15px;
+  height: 15px;
+}
+.conto-comandi {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.conto .nota {
+  margin-top: 8px;
+}
+
+/* La password si vede una volta sola: si mette in evidenza, con l'avvertenza
+   accanto — non in fondo, dove non la legge nessuno. */
+.password-mostrata {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border-radius: var(--r-riga);
+  background: #1d2a1d;
+}
+.password-mostrata p {
+  margin: 0 0 6px;
+  color: var(--inchiostro);
+  font-size: 13px;
+}
+code.password {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  color: #a5e2a5;
+  user-select: all;
+}
+
+@media (max-width: 860px) {
+  .conto-funzioni label,
+  .conti .mini {
+    min-height: 40px;
+  }
+}

@@ -28,7 +28,7 @@ export const ESISTENTI = ['misura', 'proprieta', 'cerca']
  *   …/DWG/?f=tutte          accende tutto ciò che esiste
  *   …/DWG/?f=               spegne
  */
-export function funzioniAbilitate() {
+export function funzioniDimostrazione() {
   const url = new URLSearchParams(location.search)
   if (url.has('f')) {
     const grezzo = url.get('f').trim()

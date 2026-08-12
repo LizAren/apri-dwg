@@ -22,7 +22,8 @@ import { UNITA, SCELTE_UNITA } from './modello/unita.js'
 import { Tela } from './vista/tela.js'
 import { montaBloccate } from './interfaccia/blocco.js'
 import { Strumenti } from './interfaccia/strumenti.js'
-import { funzioniAbilitate } from './interfaccia/permessi.js'
+import { funzioniDimostrazione } from './interfaccia/permessi.js'
+import { Accesso } from './interfaccia/accesso.js'
 import { esportaPdf, SCALE } from './esporta/pdf.js'
 
 const $ = (id) => document.getElementById(id)
@@ -31,7 +32,15 @@ const tela = new Tela($('tela'))
 let modello = null
 let spazioAttivo = null
 let layerVisibili = new Set()
-const abilitate = funzioniAbilitate()
+
+/**
+ * Quali funzioni sono accese adesso.
+ *
+ * Con un account entrato comanda il SERVER (`utente.funzioni`); senza account
+ * vale l'interruttore da dimostrazione nell'indirizzo. Il resto del programma
+ * chiede solo questo e non sa da dove venga la risposta.
+ */
+let abilitate = funzioniDimostrazione()
 
 /**
  * Misure leggibili: la quantità è in unità di disegno, e va portata al
@@ -117,8 +126,7 @@ async function apri(file) {
     disegnaSpazi()
     disegnaLayer()
     disegnaRapporto()
-    strumenti.abilita(abilitate)
-    $('sez-strumenti').hidden = abilitate.length === 0
+    aggiornaPermessi()
     $('benvenuto').hidden = true
     for (const b of ['btn-tutto', 'btn-fondo', 'btn-pdf']) $(b).disabled = false
   } catch (e) {
@@ -460,7 +468,23 @@ new ResizeObserver(() => {
 
 // ---------------------------------------------------------------------------
 
-montaBloccate($('bloccate'), $('finestra-accesso'), abilitate)
+/** Rimette a posto strumenti ed elenco bloccate dopo un accesso o un'uscita. */
+function aggiornaPermessi() {
+  abilitate = accesso?.utente ? accesso.funzioni : funzioniDimostrazione()
+  strumenti.abilita(abilitate)
+  $('sez-strumenti').hidden = !modello || abilitate.length === 0
+  montaBloccate($('bloccate'), $('finestra-accesso'), abilitate)
+}
+
+const accesso = new Accesso({
+  tasto: $('btn-accedi'),
+  finestra: $('finestra-accedi'),
+  finestraAdmin: $('finestra-admin'),
+  cambiato: () => aggiornaPermessi(),
+})
+
+aggiornaPermessi()
+accesso.riprendi()
 
 const escapa = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>

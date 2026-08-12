@@ -49,6 +49,7 @@
           Fondo bianco
         </button>
         <button type="button" class="comando primario" id="btn-pdf" disabled>Converti in PDF</button>
+        <button type="button" class="comando" id="btn-accedi">Accedi</button>
       </div>
       <input type="file" id="file" accept=".dwg,.dxf" hidden />
     </header>
@@ -235,5 +236,65 @@
       </div>
     </dialog>
 
+
+    <!-- Accesso ------------------------------------------------------------ -->
+    <dialog class="finestra" id="finestra-accedi">
+      <div class="finestra-dentro">
+        <h2 id="accedi-titolo">Accedi</h2>
+
+        <div id="accedi-modulo">
+          <p class="nota">
+            Gli account non si creano da qui: li crea l'amministratore. Se ti
+            serve l'accesso, clicca una delle funzioni col lucchetto e scrivimi.
+          </p>
+          <div class="riga">
+            <label for="accedi-nome">Nome utente</label>
+            <input class="campo" type="text" id="accedi-nome" autocomplete="username" />
+          </div>
+          <div class="riga">
+            <label for="accedi-password">Password</label>
+            <input class="campo" type="password" id="accedi-password" autocomplete="current-password" />
+          </div>
+          <p class="errore-riga" id="accedi-errore" hidden></p>
+        </div>
+
+        <div id="accedi-dentro" hidden>
+          <p id="accedi-funzioni"></p>
+          <div class="recapiti">
+            <button type="button" class="comando" id="accedi-admin" hidden>Gestisci gli account</button>
+            <button type="button" class="comando" id="accedi-esci">Esci</button>
+          </div>
+        </div>
+
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="accedi-chiudi">Chiudi</button>
+          <button type="button" class="comando primario" id="accedi-fai">Entra</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Amministrazione degli account --------------------------------------- -->
+    <dialog class="finestra larga" id="finestra-admin">
+      <div class="finestra-dentro">
+        <h2>Account</h2>
+        <p class="nota">
+          Non c'è registrazione: gli account li crei tu. La password si vede una
+          volta sola, poi nel database resta solo l'impronta.
+        </p>
+
+        <div class="riga">
+          <label for="admin-nuovo">Nuovo account</label>
+          <input class="campo" type="text" id="admin-nuovo" placeholder="nome.utente" />
+          <button type="button" class="comando primario" id="admin-crea">Crea</button>
+        </div>
+
+        <div id="admin-password" class="password-mostrata" hidden></div>
+        <div id="admin-elenco" class="conti"></div>
+
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="admin-chiudi">Chiudi</button>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>

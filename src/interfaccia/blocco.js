@@ -118,6 +118,9 @@ const LUCCHETTO = `<svg class="lucchetto" viewBox="0 0 24 24" fill="none"
  */
 export function montaBloccate(contenitore, finestra, gia = []) {
   const attive = new Set(gia)
+  // Si ridisegna da capo a ogni accesso o uscita: le voci accese spariscono da
+  // qui e ricompaiono fra gli strumenti.
+  contenitore.innerHTML = ''
   const titolo = finestra.querySelector('#accesso-titolo')
   const testo = finestra.querySelector('#accesso-testo')
   const mail = finestra.querySelector('#accesso-mail')
