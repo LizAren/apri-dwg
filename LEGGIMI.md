@@ -16,7 +16,7 @@ Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 npm install
 npm run dev        # sviluppo, apre su localhost
 npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
-npm run verifica   # 85 controlli misurati sui file di prova
+npm run verifica   # 95 controlli misurati sui file di prova
 node strumenti/schermate.mjs      # apre l'app in un browser vero e la fotografa
 node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
@@ -127,9 +127,9 @@ Sei esistono e si accendono da un account; tre no, e non è una dimenticanza.
 | Elenco blocchi | ✅ conteggio degli inserimenti (⚠️ non è un computo metrico) |
 | Tutte le tavole in un PDF | ✅ una pagina per spazio, ognuna con la sua scala |
 | Export DXF e PNG | ✅ 🔴 esporta la GEOMETRIA, non il file: blocchi espansi, quote diventate linee |
-| Annotazioni | ❌ da fare |
-| Salvataggio e condivisione | ❌ serve spazio sul server: quota, scadenza, dati di clienti |
-| Confronto fra versioni | ❌ da fare |
+| Annotazioni | ✅ nuvola di revisione, freccia, testo — finiscono in PDF e PNG |
+| Confronto fra versioni | ✅ identità geometrica: grigio invariato, rosso tolto, verde aggiunto |
+| Salvataggio e condivisione | ✅ 🔴 si salva il LAVORO, mai il disegno |
 
 🔴 **L'export DXF si verifica rileggendolo con il nostro stesso lettore**: è
 l'unico modo per sapere se quello che esce è un DXF vero. Scarto misurato
@@ -138,3 +138,18 @@ sull'estensione: **0,000%**.
 🔴 **L'amministratore ha tutte le funzioni per definizione**, non riga per riga:
 senza quella regola, aggiungendone una nuova sarebbe l'unico a non averla e non
 potrebbe nemmeno accendersela.
+
+## 🔴 Il salvataggio non salva il disegno
+
+Il DWG **non sale mai sul server**, nemmeno con il salvataggio acceso. Si
+conserva soltanto il **lavoro** — vista, layer accesi, annotazioni — legato
+all'**impronta SHA-256 del file**, calcolata nel browser. Riaprendo lo stesso
+disegno il lavoro torna; con un link di condivisione chi lo riceve applica le
+tue annotazioni alla **sua** copia del disegno.
+
+Così la frase scritta in pagina resta vera, e non servono quote da gigabyte né
+scadenze per fare spazio: un lavoro pesa qualche kB.
+
+E non è una dichiarazione d'intenti: `api/lavori.php` **rifiuta** un pacchetto
+che contenga geometria del disegno (HTTP 422), perché una promessa che dipende
+dalla buona volontà del client non è una promessa.
