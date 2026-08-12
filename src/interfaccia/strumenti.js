@@ -363,9 +363,9 @@ export class Strumenti {
     }
 
     e.innerHTML =
-      `<p class="nota">🔴 Si salva il <strong>lavoro</strong>, non il disegno: vista, ` +
-      `layer accesi e annotazioni, legati all'impronta del file. Il DWG non sale ` +
-      `da nessuna parte. Riaprendo lo stesso disegno il lavoro torna.</p>` +
+      `<p class="nota">Si salva il <strong>lavoro</strong>, non il disegno: vista, ` +
+      `layer accesi e annotazioni, legati all'impronta del file. Il DWG non viene ` +
+      `caricato. Riaprendo lo stesso disegno il lavoro torna.</p>` +
       '<div class="recapiti">' +
       '<button type="button" class="comando primario" id="lav-salva">Salva il lavoro</button>' +
       (mio ? '<button type="button" class="comando" id="lav-link">Link di condivisione</button>' : '') +
@@ -831,8 +831,8 @@ export class Strumenti {
           ? `<dl class="rapporto"><dt>invariate</dt><dd>${c.uguali}</dd>` +
             `<dt>tolte</dt><dd>${c.tolte}</dd><dt>aggiunte</dt><dd>${c.aggiunte}</dd>` +
             `<dt>confrontato con</dt><dd>${sicuro(c.nome)}</dd></dl>` +
-            `<p class="nota">⚠️ Un oggetto spostato risulta uno tolto e uno aggiunto: ` +
-            `riconoscere lo spostamento vorrebbe dire indovinare le intenzioni.</p>`
+            `<p class="nota">Un oggetto spostato risulta come uno tolto e uno aggiunto: ` +
+            `riconoscere lo spostamento richiederebbe di interpretare le intenzioni.</p>`
           : '')
       const campo = e.querySelector('#confronto-file')
       e.querySelector('#confronto-apri').addEventListener('click', () => campo.click())
@@ -990,7 +990,7 @@ export class Strumenti {
     if (this.attivo === 'dxf') {
       e.hidden = false
       e.innerHTML =
-        `<p class="nota">🔴 È un'esportazione della <strong>geometria disegnata</strong>, ` +
+        `<p class="nota">È un'esportazione della <strong>geometria disegnata</strong>, ` +
         `non una copia del file: i blocchi sono già espansi, le quote sono diventate ` +
         `linee e testi, i tratteggi sono solo il contorno. Chi lo riapre trova lo ` +
         `stesso disegno, ma piatto.</p>` +

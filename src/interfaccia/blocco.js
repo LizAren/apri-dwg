@@ -146,8 +146,8 @@ export function collegaRichiesta(finestra) {
     testo.textContent = `${maiuscola(f.che)}.`
     const oggetto = encodeURIComponent(`Accesso alla funzione «${f.nome}» del visualizzatore DWG`)
     const corpo = encodeURIComponent(
-      `Ciao Stefano,\n\nvorrei l'accesso alla funzione «${f.nome}» del visualizzatore DWG.\n\n` +
-      `Ti scrivo da:\nNome:\nAttività:\nA cosa mi serve:\n\nGrazie.`
+      `Buongiorno,\n\nvorrei richiedere l'accesso alla funzione «${f.nome}» ` +
+      `del visualizzatore DWG.\n\nNome:\nAttività:\nA cosa mi serve:\n\nGrazie.`
     )
     mail.href = `mailto:${MAIL}?subject=${oggetto}&body=${corpo}`
     finestra.showModal()

@@ -348,7 +348,7 @@ export class Accesso {
     const n = document.createElement('p')
     n.className = 'nota'
     n.textContent =
-      'Si vede solo adesso: nel database c\'è solo l\'impronta. Copiala e dagliela a voce o per iscritto.'
+      'Si vede solo adesso: nel database resta solo l\'impronta. Copiarla e comunicarla all\'interessato.'
     dove.append(t, c, n)
   }
 }
