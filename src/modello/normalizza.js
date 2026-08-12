@@ -546,8 +546,11 @@ function riempiViste(spazio, modello, rapporto) {
 /**
  * Ritaglio di una spezzata dentro un rettangolo (Liang-Barsky, segmento per
  * segmento). Restituisce i tratti sopravvissuti.
+ *
+ * Serve alle viste dei layout e alla tavola con legenda: là il disegno deve
+ * fermarsi al bordo del riquadro, se no sborda sulla legenda.
  */
-function ritaglia(punti, r) {
+export function ritaglia(punti, r) {
   const fuori = []
   let corrente = null
   for (let i = 0; i < punti.length - 2; i += 2) {

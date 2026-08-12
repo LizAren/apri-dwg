@@ -109,6 +109,25 @@ const strumenti = new Strumenti({
         mostraErrore(e.message)
       }
     },
+    /**
+     * La tavola stampa l'inquadratura CORRENTE: il rettangolo di disegno che
+     * in questo momento sta dentro la tela, non l'estensione del file.
+     */
+    async tavola(scelte) {
+      const { esportaTavola } = await import('./esporta/pdf.js')
+      const c = tela.canvas
+      const [x0, y1] = tela.aDisegno(0, 0)
+      const [x1, y0] = tela.aDisegno(c.clientWidth, c.clientHeight)
+      const esito = await esportaTavola(modello, spazioAttivo, {
+        ...opzioniStampa(),
+        piede: false,
+        vista: [x0, y0, x1, y1],
+        titolo: scelte.titolo,
+        conLayer: scelte.conLayer,
+      })
+      scarica(esito.blob, base(modello) + '-tavola.pdf')
+      return esito
+    },
     async dxf() {
       const { esportaDxf } = await import('./esporta/dxf.js')
       const esito = esportaDxf(modello, spazioAttivo, layerVisibili)
@@ -139,6 +158,10 @@ function opzioniStampa() {
     monocromatico: $('pdf-mono').checked,
     piede: $('pdf-piede').checked,
     layerVisibili,
+    // 🔴 Le annotazioni fanno parte di ciò che si stampa. Mancavano qui, e il
+    // risultato era che finivano nel PDF di una tavola sola ma sparivano dalle
+    // tavole multiple e dalla tavola con legenda — cioè proprio dove servono.
+    note: strumenti.noteQui(),
     mmPerUnitaSupposto: modello?.unita?.dichiarate
       ? null
       : UNITA[Number($('pdf-unita').value)]?.mm,

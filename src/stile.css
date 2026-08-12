@@ -1149,3 +1149,49 @@ code.password {
 .esito-riga[data-scegli] {
   cursor: pointer;
 }
+
+/* --- Libreria di simboli --------------------------------------------------- */
+
+.gruppo-simboli h3 {
+  margin: 12px 0 6px;
+  font-family: var(--titoli);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.griglia-simboli {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 4px;
+}
+.simbolo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: none;
+  border-radius: var(--r-riga);
+  background: transparent;
+  color: var(--tenue);
+  font: inherit;
+  font-size: 9.5px;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.18s var(--uscita), color 0.18s var(--uscita);
+}
+.simbolo svg {
+  width: 30px;
+  height: 30px;
+}
+.simbolo:hover {
+  background: var(--carta-alta);
+  color: var(--inchiostro);
+}
+.simbolo[aria-pressed='true'] {
+  background: var(--blu);
+  color: #fff;
+}

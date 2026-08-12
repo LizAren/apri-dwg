@@ -16,7 +16,7 @@ Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 npm install
 npm run dev        # sviluppo, apre su localhost
 npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
-npm run verifica   # 95 controlli misurati sui file di prova
+npm run verifica   # 102 controlli misurati sui file di prova
 node strumenti/schermate.mjs      # apre l'app in un browser vero e la fotografa
 node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
@@ -117,7 +117,7 @@ apertura. Il numero misurato in locale non era quello che riceveva la gente.
 
 ## Le funzioni, e cosa sono davvero
 
-Tutte e nove esistono e si accendono da un account.
+Tutte e undici esistono e si accendono da un account.
 
 | Funzione | Stato |
 |---|---|
@@ -127,7 +127,9 @@ Tutte e nove esistono e si accendono da un account.
 | Elenco blocchi | ✅ conteggio degli inserimenti (⚠️ non è un computo metrico) |
 | Tutte le tavole in un PDF | ✅ una pagina per spazio, ognuna con la sua scala |
 | Export DXF e PNG | ✅ 🔴 esporta la GEOMETRIA, non il file: blocchi espansi, quote diventate linee |
-| Annotazioni | ✅ nuvola di revisione, freccia, testo — finiscono in PDF e PNG |
+| Annotazioni | ✅ nuvola, freccia, testo: si creano premendo «Nuova», si spostano e si ridimensionano |
+| Libreria di simboli | ✅ **71 simboli** in 8 categorie, colori secondo la segnaletica |
+| Tavola con legenda | ✅ stampa l'inquadratura corrente, con in legenda solo ciò che vi compare |
 | Confronto fra versioni | ✅ identità geometrica: grigio invariato, rosso tolto, verde aggiunto |
 | Salvataggio e condivisione | ✅ 🔴 si salva il LAVORO, mai il disegno |
 
@@ -153,3 +155,34 @@ scadenze per fare spazio: un lavoro pesa qualche kB.
 E non è una dichiarazione d'intenti: `api/lavori.php` **rifiuta** un pacchetto
 che contenga geometria del disegno (HTTP 422), perché una promessa che dipende
 dalla buona volontà del client non è una promessa.
+
+## La libreria di simboli
+
+71 simboli in otto categorie — antincendio, emergenza, pericolo, obbligo,
+elettrico, idraulico, clima, reti — da posare sul disegno con un clic e
+ridimensionare dalla maniglia.
+
+🔴 **Sono definiti come spezzate in coordinate unitarie (0..1)**, non come
+immagini né percorsi SVG: la stessa definizione serve allo schermo, al PDF
+vettoriale e al PNG senza che nessuno dei tre debba reinterpretarla. È il modo
+con cui un simbolo finisce stampato diverso da come lo si era visto.
+
+🔴 **I colori seguono la segnaletica** (ISO 7010 / UNI): rosso antincendio,
+verde salvataggio, giallo pericolo, blu obbligo. Un idrante verde sarebbe
+sbagliato due volte — non si legge a colpo d'occhio e contraddice la
+segnaletica vera dell'edificio. Restano modificabili, ma partono giusti.
+
+Il catalogo è verificato per intero a ogni giro: nessun simbolo vuoto, nessuna
+coordinata fuori dal proprio riquadro, identificativi unici, colore coerente
+con la categoria.
+
+## La tavola con legenda
+
+Non stampa il disegno: stampa **quello che si vede adesso**. Si inquadra la
+zona, si genera, e accanto compare una legenda che elenca **soltanto ciò che
+sta nel riquadro** — i simboli posati, con il loro segno vero ridisegnato, e i
+layer del disegno effettivamente presenti.
+
+🔴 Una legenda che riporta tutti i layer del file anche quando in tavola non si
+vedono è una legenda che mente, e su una tavola di sicurezza la differenza fra
+«c'è» e «c'è nel file» è tutta.

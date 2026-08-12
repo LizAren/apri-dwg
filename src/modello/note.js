@@ -19,6 +19,8 @@ export const COLORI_NOTA = {
   blu: '#3f7fb5',
 }
 
+import { formeSimbolo } from './simboli.js'
+
 export const TIPI_NOTA = {
   nuvola: 'nuvola di revisione',
   freccia: 'freccia',
@@ -32,10 +34,33 @@ export const TIPI_NOTA = {
 export function geometriaNota(nota, altezzaTesto) {
   if (nota.tipo === 'freccia') return { spezzate: freccia(nota), testi: [] }
   if (nota.tipo === 'nuvola') return { spezzate: [nuvola(nota)], testi: [] }
+  if (nota.tipo === 'simbolo') {
+    // Le forme unitarie vengono portate alla misura e al posto della nota. Il
+    // simbolo è ancorato in basso a sinistra, come tutto il resto.
+    const h = nota.altezza || altezzaTesto
+    const [x, y] = nota.punti
+    const spezzate = formeSimbolo(nota.simbolo).map((f) => {
+      const p = new Array(f.length)
+      for (let i = 0; i < f.length; i += 2) {
+        p[i] = x + f[i] * h
+        p[i + 1] = y + f[i + 1] * h
+      }
+      return p
+    })
+    return { spezzate, testi: [] }
+  }
+
   if (nota.tipo === 'testo') {
+    // L'altezza è una proprietà della nota, non una costante: si trascina come
+    // tutto il resto. Il valore passato serve solo alle note vecchie, che non
+    // ce l'hanno.
     return {
       spezzate: [],
-      testi: [{ x: nota.punti[0], y: nota.punti[1], testo: nota.testo || '', altezza: altezzaTesto }],
+      testi: [{
+        x: nota.punti[0], y: nota.punti[1],
+        testo: nota.testo || '',
+        altezza: nota.altezza || altezzaTesto,
+      }],
     }
   }
   return { spezzate: [], testi: [] }

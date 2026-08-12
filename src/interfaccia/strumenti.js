@@ -15,6 +15,7 @@
 import { Indice, aggancia, colpisci, lunghezza, area, NOMI_AGGANCIO } from '../vista/aggancio.js'
 import { FUNZIONI, LUCCHETTO, iconaDi } from './blocco.js'
 import { geometriaNota, COLORI_NOTA, TIPI_NOTA } from '../modello/note.js'
+import { SIMBOLI, CATEGORIE, PER_ID, formeSimbolo, coloreDi } from '../modello/simboli.js'
 import { confronta, COLORI_CONFRONTO } from '../modello/confronto.js'
 import { calcolaEstensione } from '../modello/normalizza.js'
 
@@ -55,6 +56,8 @@ export class Strumenti {
     this.trascina = null
     this.spazioPrima = null
     this.tipoNota = 'nuvola'
+    this.simboloScelto = null
+    this.cercaSimbolo = ''
     this.coloreNota = COLORI_NOTA.rosso
     this.agganciato = null
     this.selezionata = null
@@ -87,6 +90,16 @@ export class Strumenti {
    * chi apre un disegno solo per guardarlo o stamparlo non deve pagarne il
    * costo.
    */
+  /**
+   * «Annota» e «Simboli» sono due pannelli ma UNA sola modalità sul disegno:
+   * posano cose nella stessa lista e si scelgono, spostano e ridimensionano
+   * allo stesso modo. Senza questo, il simbolo scelto nella libreria non si
+   * posava perché gli eventi guardavano solo lo strumento «Annota».
+   */
+  _modoNote() {
+    return this.attivo === 'note' || this.attivo === 'simboli'
+  }
+
   /** Le annotazioni dello spazio che si sta guardando. */
   noteQui() {
     if (!this.spazio) return []
@@ -115,6 +128,10 @@ export class Strumenti {
       this.tela.mostra(this.spazio)
     }
     this.attivo = this.attivo === nome ? null : nome
+    if (!this._modoNote()) {
+      this.creazioneArmata = false
+      this.notaScelta = -1
+    }
     if (this.attivo !== 'misura') this.punti = []
     if (this.attivo !== 'proprieta') this.selezionata = null
     this.agganciato = null
@@ -135,13 +152,14 @@ export class Strumenti {
 
     c.addEventListener('pointerdown', (e) => {
       giu = { x: e.clientX, y: e.clientY }
-      if (this.attivo !== 'note') return
+      if (!this._modoNote()) return
       const [x, y] = this._punto(e)
 
       // 🔴 Si crea SOLO dopo aver premuto «Nuova». Prima ogni clic sul disegno
       // lasciava un'annotazione, e bastava sbagliare mira per riempire la
       // tavola di nuvole da cancellare a una a una.
       if (this.creazioneArmata) {
+        if (this.tipoNota === 'simbolo') return
         if (this.tipoNota === 'testo') return
         this.notaInCorso = {
           tipo: this.tipoNota,
@@ -172,14 +190,14 @@ export class Strumenti {
     })
 
     c.addEventListener('pointermove', (e) => {
-      if (this.attivo === 'note' && this.notaInCorso) {
+      if (this._modoNote() && this.notaInCorso) {
         const [x, y] = this._punto(e)
         this.notaInCorso.punti[2] = x
         this.notaInCorso.punti[3] = y
         this.tela.ridisegna()
         return
       }
-      if (this.attivo === 'note' && this.trascina) {
+      if (this._modoNote() && this.trascina) {
         const [x, y] = this._punto(e)
         const n = this.noteQui()[this.trascina.indice]
         if (!n) return
@@ -191,6 +209,10 @@ export class Strumenti {
             n.punti[i + 1] += dy
           }
           this.trascina.da = [x, y]
+        } else if (this.trascina.vertice === 'misura') {
+          // Si tira in verticale: l'altezza è la misura che conta, e la
+          // larghezza segue il testo.
+          n.altezza = Math.max(1e-9, y - n.punti[1])
         } else {
           n.punti[this.trascina.vertice * 2] = x
           n.punti[this.trascina.vertice * 2 + 1] = y
@@ -200,7 +222,7 @@ export class Strumenti {
       }
       // Con lo strumento acceso e niente in mano, il puntatore dice cosa
       // succederebbe: freccia sulle maniglie, mano sulle note.
-      if (this.attivo === 'note' && !this.creazioneArmata) {
+      if (this._modoNote() && !this.creazioneArmata) {
         const [x, y] = this._punto(e)
         const t = 9 / this.tela.zoom
         const sopra = this._manigliaSotto(x, y, t) || this._notaSotto(x, y, t) >= 0
@@ -225,7 +247,7 @@ export class Strumenti {
       const mosso = giu ? Math.hypot(e.clientX - giu.x, e.clientY - giu.y) : 99
       giu = null
 
-      if (this.attivo === 'note') {
+      if (this._modoNote()) {
         const [x, y] = this._punto(e)
         if (this.trascina) {
           this.trascina = null
@@ -245,12 +267,27 @@ export class Strumenti {
             this._scriviEsito()
           }
           this.tela.ridisegna()
+        } else if (this.creazioneArmata && this.tipoNota === 'simbolo' && mosso <= 4) {
+          // Un simbolo si posa con un clic: nasce grande quanto un pollice sullo
+          // schermo, poi si tira dalla maniglia.
+          this.noteQui().push({
+            tipo: 'simbolo',
+            simbolo: this.simboloScelto,
+            colore: this.coloreNota,
+            punti: [x, y],
+            altezza: 48 / this.tela.zoom,
+          })
+          this.notaScelta = this.noteQui().length - 1
+          this.creazioneArmata = false
+          this._scriviEsito()
+          this.tela.ridisegna()
         } else if (this.creazioneArmata && this.tipoNota === 'testo' && mosso <= 4) {
           const testo = prompt('Testo della nota:')
           if (testo) {
             this.noteQui().push({
               tipo: 'testo', colore: this.coloreNota, testo,
               punti: [x, y], scala: 1 / this.tela.zoom,
+              altezza: 14 / this.tela.zoom,
             })
             this.notaScelta = this.noteQui().length - 1
             this.creazioneArmata = false
@@ -269,7 +306,7 @@ export class Strumenti {
 
     document.addEventListener('keydown', (e) => {
       if (e.target.matches('input, textarea, select')) return
-      if (this.attivo === 'note' && (e.key === 'Delete' || e.key === 'Backspace')) {
+      if (this._modoNote() && (e.key === 'Delete' || e.key === 'Backspace')) {
         if (this.notaScelta >= 0) {
           this.noteQui().splice(this.notaScelta, 1)
           this.notaScelta = -1
@@ -485,7 +522,7 @@ export class Strumenti {
 
     // La nota scelta mostra le sue maniglie: sono l'unico modo per capire che
     // si può afferrare, e dove.
-    if (this.attivo === 'note' && this.notaScelta >= 0 && note[this.notaScelta]) {
+    if (this._modoNote() && this.notaScelta >= 0 && note[this.notaScelta]) {
       const n = note[this.notaScelta]
       ctx.save()
       ctx.strokeStyle = '#ffffff'
@@ -565,7 +602,18 @@ export class Strumenti {
         { x: n.punti[2], y: n.punti[3], vertice: 1 },
       ]
     }
+    if (n.tipo === 'testo' || n.tipo === 'simbolo') {
+      const h = this._altezzaNota(n)
+      const largo = n.tipo === 'simbolo' ? h : (n.testo || '').length * h * 0.58
+      // Una sola maniglia, in alto a destra: tirandola si cambia la misura.
+      return [{ x: n.punti[0] + largo, y: n.punti[1] + h, vertice: 'misura' }]
+    }
     return []
+  }
+
+  /** Altezza in unità di disegno di una nota che ne ha una. */
+  _altezzaNota(n) {
+    return n.altezza || (n.scala || 1 / this.tela.zoom) * 14
   }
 
   _manigliaSotto(x, y, tolleranza) {
@@ -588,8 +636,13 @@ export class Strumenti {
     // che l'occhio vede.
     for (let i = note.length - 1; i >= 0; i--) {
       const n = note[i]
+      if (n.tipo === 'simbolo') {
+        const h = this._altezzaNota(n)
+        if (x >= n.punti[0] && x <= n.punti[0] + h && y >= n.punti[1] && y <= n.punti[1] + h) return i
+        continue
+      }
       if (n.tipo === 'testo') {
-        const h = (n.scala || 1 / this.tela.zoom) * 14
+        const h = this._altezzaNota(n)
         const largo = (n.testo || '').length * h * 0.6
         if (x >= n.punti[0] - h && x <= n.punti[0] + largo && y >= n.punti[1] - h && y <= n.punti[1] + h) return i
         continue
@@ -615,7 +668,7 @@ export class Strumenti {
   }
 
   _disegnaNota(ctx, n) {
-    const altezza = (n.scala || 1 / this.tela.zoom) * 14
+    const altezza = this._altezzaNota(n)
     const { spezzate, testi } = geometriaNota(n, altezza)
     ctx.save()
     ctx.strokeStyle = n.colore
@@ -844,6 +897,100 @@ export class Strumenti {
       return
     }
 
+    if (this.attivo === 'tavola') {
+      e.hidden = false
+      e.innerHTML =
+        `<p class="nota">Stampa <strong>quello che si vede adesso</strong>, non ` +
+        `tutto il disegno: sposta e ingrandisci fino a inquadrare la zona, poi ` +
+        `genera. In legenda finisce solo ciò che compare nel riquadro.</p>` +
+        '<input type="text" id="tav-titolo" class="campo" placeholder="titolo della tavola" ' +
+        'value="Planimetria" autocomplete="off">' +
+        '<div class="riga interruttori"><label><input type="checkbox" id="tav-layer" checked> ' +
+        'elenca anche i layer del disegno</label></div>' +
+        '<button type="button" class="comando primario" id="tav-fai">Genera la tavola</button>' +
+        '<div id="tav-esito"></div>'
+      e.querySelector('#tav-fai').addEventListener('click', async (ev) => {
+        ev.target.disabled = true
+        ev.target.textContent = 'Genero…'
+        try {
+          const r = await this.esporta.tavola?.({
+            titolo: e.querySelector('#tav-titolo').value.trim() || 'Tavola',
+            conLayer: e.querySelector('#tav-layer').checked,
+          })
+          if (r) {
+            e.querySelector('#tav-esito').innerHTML =
+              `<p class="nota">Scala 1:${r.scala}, ${r.legenda} voci in legenda.</p>`
+          }
+        } catch (err) {
+          e.querySelector('#tav-esito').innerHTML = ''
+          const p2 = document.createElement('p')
+          p2.className = 'nota'
+          p2.textContent = err.message
+          e.querySelector('#tav-esito').appendChild(p2)
+        } finally {
+          ev.target.disabled = false
+          ev.target.textContent = 'Genera la tavola'
+        }
+      })
+      return
+    }
+
+    if (this.attivo === 'simboli') {
+      e.hidden = false
+      const q = this.cercaSimbolo.trim().toLowerCase()
+      const scelti = SIMBOLI.filter(
+        (x) => !q || x.nome.toLowerCase().includes(q) || CATEGORIE[x.cat].nome.toLowerCase().includes(q)
+      )
+      const perCat = new Map()
+      for (const x of scelti) {
+        if (!perCat.has(x.cat)) perCat.set(x.cat, [])
+        perCat.get(x.cat).push(x)
+      }
+      e.innerHTML =
+        '<input type="search" id="simb-cerca" class="campo" placeholder="cerca un simbolo…" ' +
+        `value="${sicuro(this.cercaSimbolo)}" autocomplete="off">` +
+        `<p class="nota">${
+          this.creazioneArmata && this.tipoNota === 'simbolo'
+            ? 'Clicca sul disegno dove va il simbolo.'
+            : 'Scegli un simbolo, poi clicca sul disegno. Si ridimensiona dalla maniglia.'
+        }</p>` +
+        [...perCat]
+          .map(
+            ([cat, elenco]) =>
+              `<div class="gruppo-simboli"><h3>${CATEGORIE[cat].nome}</h3><div class="griglia-simboli">` +
+              elenco
+                .map(
+                  (x) =>
+                    `<button type="button" class="simbolo" data-simbolo="${x.id}" title="${sicuro(x.nome)}" ` +
+                    `aria-pressed="${this.simboloScelto === x.id}">` +
+                    anteprimaSimbolo(x.id, CATEGORIE[x.cat].colore) +
+                    `<span>${sicuro(x.nome)}</span></button>`
+                )
+                .join('') +
+              '</div></div>'
+          )
+          .join('') +
+        (scelti.length ? '' : '<p class="nota">Nessun simbolo con questo nome.</p>')
+
+      const campo = e.querySelector('#simb-cerca')
+      campo.addEventListener('input', () => {
+        this.cercaSimbolo = campo.value
+        this._scriviEsito()
+        e.querySelector('#simb-cerca').focus()
+      })
+      for (const b of e.querySelectorAll('[data-simbolo]')) {
+        b.addEventListener('click', () => {
+          this.simboloScelto = b.dataset.simbolo
+          this.tipoNota = 'simbolo'
+          this.coloreNota = coloreDi(this.simboloScelto)
+          this.creazioneArmata = true
+          this.tela.canvas.style.cursor = 'crosshair'
+          this._scriviEsito()
+        })
+      }
+      return
+    }
+
     if (this.attivo === 'note') {
       e.hidden = false
       const note = this.noteQui()
@@ -886,9 +1033,7 @@ export class Strumenti {
               .map(
                 (n, i) =>
                   `<div class="esito-riga${i === this.notaScelta ? ' scelta' : ''}" data-scegli="${i}">` +
-                  `<span class="esito-testo">${
-                    sicuro(n.tipo === 'testo' ? n.testo : TIPI_NOTA[n.tipo])
-                  }</span><button type="button" class="mini" data-togli="${i}">togli</button></div>`
+                  `<span class="esito-testo">${sicuro(nomeNota(n))}</span><button type="button" class="mini" data-togli="${i}">togli</button></div>`
               )
               .join('') +
             '</div>'
@@ -1062,6 +1207,29 @@ const righe = (voci) =>
 const I = (d) =>
   `<svg class="attrezzo" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
   `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+
+/** Anteprima del simbolo: le stesse forme, in un riquadro da elenco. */
+function anteprimaSimbolo(id, colore) {
+  const linee = formeSimbolo(id)
+    .map((f) => {
+      let d = ''
+      for (let i = 0; i < f.length; i += 2) d += (i ? 'L' : 'M') + f[i].toFixed(3) + ' ' + f[i + 1].toFixed(3)
+      return `<path d="${d}"/>`
+    })
+    .join('')
+  // Le forme hanno y verso l'alto, l'SVG verso il basso: si ribalta una volta.
+  return (
+    `<svg viewBox="0 0 1 1" fill="none" stroke="${colore}" stroke-width="0.045" ` +
+    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
+    `<g transform="translate(0,1) scale(1,-1)">${linee}</g></svg>`
+  )
+}
+
+/** Come si chiama una nota nell'elenco: un simbolo dice il suo nome. */
+const nomeNota = (n) =>
+  n.tipo === 'testo' ? n.testo
+  : n.tipo === 'simbolo' ? (PER_ID[n.simbolo]?.nome || 'simbolo')
+  : TIPI_NOTA[n.tipo] || n.tipo
 
 const sicuro = (t) =>
   String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch])

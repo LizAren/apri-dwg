@@ -40,6 +40,9 @@ const D = {
   note:
     '<path d="M4 20l1-3.6L15.6 5.8a1.7 1.7 0 0 1 2.4 0l1.2 1.2a1.7 1.7 0 0 1 0 2.4L8.6 20z"/>' +
     '<path d="M14.4 7l2.6 2.6"/>',
+  simboli:
+    '<circle cx="7" cy="7" r="3.6"/><path d="M13.6 3.6h6.8v6.8h-6.8z"/>' +
+    '<path d="M7 13.4l3.6 6.4H3.4z"/><path d="M17 13.6v6.4M13.8 16.8h6.4"/>',
   blocchi:
     '<path d="M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7z"/>' +
     '<path d="M13.5 13.5h7v7h-7z" stroke-dasharray="2.4 2.2"/>',
@@ -48,6 +51,9 @@ const D = {
   salva:
     '<path d="M7.2 17.5a4 4 0 0 1 .6-8 5 5 0 0 1 9.2-1.3 3.8 3.8 0 1 1 .5 9.3z"/>' +
     '<path d="M12 20.5v-7M9.4 16l2.6-2.6 2.6 2.6"/>',
+  tavola:
+    '<path d="M3.5 3.5h11v17h-11z"/><path d="M16.5 3.5h4v17h-4z"/>' +
+    '<path d="M17.6 7.5h1.8M17.6 11h1.8M17.6 14.5h1.8"/><path d="M6 8h6M6 12h4"/>',
   confronto:
     '<path d="M3.5 4.5h17v15h-17z"/><path d="M12 4.5v15"/>' +
     '<path d="M14.6 9h3.8M14.6 12h3.8M14.6 15h2.4"/>',
@@ -84,6 +90,12 @@ export const FUNZIONI = [
     che: 'per riaprire il disegno in un altro CAD, o per infilarlo in un preventivo',
   },
   {
+    id: 'simboli',
+    breve: 'Simboli',
+    nome: 'Libreria di simboli',
+    che: 'idranti, uscite di emergenza, prese, quadri, valvole: si posano sul disegno e si ridimensionano',
+  },
+  {
     id: 'note',
     breve: 'Annota',
     nome: 'Annotazioni',
@@ -106,6 +118,12 @@ export const FUNZIONI = [
     breve: 'Salva',
     nome: 'Salvataggio e condivisione',
     che: 'ritrovi il disegno la volta dopo e mandi un link con vista, layer e misure',
+  },
+  {
+    id: 'tavola',
+    breve: 'Tavola',
+    nome: 'Tavola con legenda',
+    che: 'stampa quello che si vede adesso, con accanto la legenda di ciò che compare nel riquadro',
   },
   {
     id: 'confronto',

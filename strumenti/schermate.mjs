@@ -258,9 +258,9 @@ await schermata('11-senza-account', SCRIVANIA, async (p) => {
     lucchetti: document.querySelectorAll('#funzioni .lucchetto').length,
     barra: !document.getElementById('sez-strumenti').hidden,
   }))
-  if (prima.voci !== 9) problemi.push(`11: ${prima.voci} funzioni in elenco prima del disegno, attese 9`)
+  if (prima.voci !== 11) problemi.push(`11: ${prima.voci} funzioni in elenco prima del disegno, attese 11`)
   if (prima.accese !== 0) problemi.push(`11: ${prima.accese} funzioni accese senza account`)
-  if (prima.lucchetti !== 9) problemi.push(`11: ${prima.lucchetti} lucchetti, attesi 9`)
+  if (prima.lucchetti !== 11) problemi.push(`11: ${prima.lucchetti} lucchetti, attesi 11`)
   if (prima.barra) problemi.push('11: la barra degli strumenti si vede senza disegno')
 
   await apri(p, 'prova-geometria.dxf')

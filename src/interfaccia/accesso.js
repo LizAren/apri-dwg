@@ -17,7 +17,7 @@
  * `api/bootstrap.php`, che è l'unico posto dove conta davvero, perché il
  * server scarta quello che non riconosce.
  */
-export const ASSEGNABILI = ['misura', 'proprieta', 'cerca', 'blocchi', 'tavole', 'dxf', 'note', 'confronto', 'salva']
+export const ASSEGNABILI = ['misura', 'proprieta', 'cerca', 'blocchi', 'tavole', 'dxf', 'note', 'simboli', 'tavola', 'confronto', 'salva']
 
 const BASE = './api'
 const CHIAVE_TOKEN = 'dwg-token'

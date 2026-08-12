@@ -208,8 +208,7 @@ function disegnaSpazio(doc, modello, spazio, o) {
   // Stessa geometria dello schermo: se il PDF se la ricalcolasse, la nuvola
   // stampata non sarebbe quella vista.
   for (const n of o.note || []) {
-    const altezza = (n.scala || 1) * 14
-    const { spezzate, testi } = geometriaNota(n, altezza)
+    const { spezzate, testi } = geometriaNota(n, (n.scala || 1) * 14)
     doc.setDrawColor(n.colore)
     doc.setTextColor(n.colore)
     doc.setLineWidth(0.4)
@@ -343,4 +342,253 @@ function estensione(primitive) {
       : p.ingombro.slice()
   }
   return e && isFinite(e[0]) ? e : [0, 0, 100, 100]
+}
+
+// ============================================================================
+//  Tavola con legenda.
+//
+//  Non è «stampa il disegno»: è «stampa QUELLO CHE VEDO adesso, e spiega cosa
+//  c'è dentro». Prende l'inquadratura corrente — non l'estensione totale — la
+//  ritaglia al bordo del riquadro e accanto mette una legenda che elenca
+//  soltanto ciò che compare in quel riquadro.
+//
+//  🔴 La legenda elenca il VISIBILE, non il disponibile. Una legenda che
+//  riporta tutti i layer del file anche quando in tavola non si vedono è una
+//  legenda che mente, e su una tavola di sicurezza la differenza fra «c'è» e
+//  «c'è nel file» è tutta.
+// ============================================================================
+
+import { formeSimbolo, PER_ID, CATEGORIE } from '../modello/simboli.js'
+import { ritaglia } from '../modello/normalizza.js'
+import { coloreLayer } from '../modello/colori.js'
+
+const LEGENDA_MM = 58
+
+export async function esportaTavola(modello, spazio, o) {
+  const opz = opzioni(o)
+  const doc = await nuovoDocumento(opz)
+  const [LF, AF] = foglio(opz)
+  const vista = o.vista // [x0, y0, x1, y1] in coordinate del disegno
+  if (!vista) throw new Error('Serve un\'inquadratura da stampare.')
+
+  const margine = opz.margine
+  const areaL = LF - margine * 2 - LEGENDA_MM
+  const areaA = AF - margine * 2 - 14 // spazio per il cartiglio in basso
+  const largo = Math.max(1e-9, vista[2] - vista[0])
+  const alto = Math.max(1e-9, vista[3] - vista[1])
+
+  const mmPerUnita = spazio.carta ? 1 : modello.unita.mm || o.mmPerUnitaSupposto || 1
+  const scala = opz.scala || scalaNormalizzata(Math.max((largo * mmPerUnita) / areaL, (alto * mmPerUnita) / areaA))
+  const k = mmPerUnita / scala
+
+  // Il disegno si centra nel riquadro. La verticale si scrive una volta e in un
+  // modo solo: il bordo ALTO del riquadro corrisponde al lato alto
+  // dell'inquadratura, e da lì si scende. La versione precedente sommava e
+  // sottraeva gli stessi termini, e il disegno finiva fuori centro.
+  const offX = margine + (areaL - largo * k) / 2
+  const cima = margine + (areaA - alto * k) / 2
+  const vx = (x) => offX + (x - vista[0]) * k
+  const vy = (y) => cima + (vista[3] - y) * k
+
+  // Riquadro del disegno.
+  doc.setDrawColor('#000000')
+  doc.setLineWidth(0.3)
+  doc.rect(margine, margine, areaL, areaA)
+
+  // --- disegno, ritagliato al riquadro --------------------------------------
+  const layerInVista = new Map()
+  let disegnate = 0
+  for (const p of spazio.primitive) {
+    if (p.tipo === 'vista' || p.infinita) continue
+    if (opz.layerVisibili && !opz.layerVisibili.has(p.layer)) continue
+    const i = p.ingombro
+    if (i[2] < vista[0] || i[0] > vista[2] || i[3] < vista[1] || i[1] > vista[3]) continue
+
+    const colore = opz.monocromatico ? '#000000' : risolviInchiostro(p.colore, true)
+    if (p.tipo === 'testo') {
+      if (p.x < vista[0] || p.x > vista[2] || p.y < vista[1] || p.y > vista[3]) continue
+      layerInVista.set(p.layer, (layerInVista.get(p.layer) || 0) + 1)
+      const h = p.altezza * k
+      if (h < 0.6) continue
+      doc.setTextColor(colore)
+      doc.setFontSize((h * 72) / 25.4)
+      doc.text(p.testo, vx(p.x), vy(p.y), { angle: (p.rotazione * 180) / Math.PI })
+      disegnate++
+      continue
+    }
+    doc.setDrawColor(colore)
+    doc.setLineWidth(Math.max(SPESSORE_MINIMO, p.spessore || 0))
+    for (const pezzo of ritaglia(p.punti, vista)) {
+      const salti = []
+      let px = vx(pezzo[0])
+      let py = vy(pezzo[1])
+      const ix = px
+      const iy = py
+      for (let i2 = 2; i2 < pezzo.length; i2 += 2) {
+        const x = vx(pezzo[i2])
+        const y = vy(pezzo[i2 + 1])
+        salti.push([x - px, y - py])
+        px = x
+        py = y
+      }
+      if (salti.length) {
+        doc.lines(salti, ix, iy, [1, 1], 'S', false)
+        disegnate++
+      }
+    }
+    layerInVista.set(p.layer, (layerInVista.get(p.layer) || 0) + 1)
+  }
+
+  // --- annotazioni e simboli, solo quelli dentro l'inquadratura -------------
+  const simboli = new Map()
+  for (const n of o.note || []) {
+    // Si guarda l'INGOMBRO della nota, non il punto di ancoraggio: una nuvola
+    // disegnata partendo da fuori riquadro ha l'angolo fuori ma il corpo
+    // dentro, e lasciarla fuori dalla legenda sarebbe sbagliato.
+    const g = geometriaNota(n, n.altezza || 14)
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity
+    for (const f of g.spezzate) {
+      for (let i = 0; i < f.length; i += 2) {
+        minx = Math.min(minx, f[i]); maxx = Math.max(maxx, f[i])
+        miny = Math.min(miny, f[i + 1]); maxy = Math.max(maxy, f[i + 1])
+      }
+    }
+    for (const t of g.testi) {
+      minx = Math.min(minx, t.x); maxx = Math.max(maxx, t.x)
+      miny = Math.min(miny, t.y); maxy = Math.max(maxy, t.y)
+    }
+    const dentro = isFinite(minx) &&
+      maxx >= vista[0] && minx <= vista[2] && maxy >= vista[1] && miny <= vista[3]
+    if (!dentro) continue
+    if (n.tipo === 'simbolo') {
+      simboli.set(n.simbolo, (simboli.get(n.simbolo) || 0) + 1)
+    }
+    const { spezzate, testi } = g
+    doc.setDrawColor(n.colore)
+    doc.setTextColor(n.colore)
+    doc.setLineWidth(0.4)
+    for (const punti of spezzate) {
+      const salti = []
+      let px = vx(punti[0])
+      let py = vy(punti[1])
+      const ix = px
+      const iy = py
+      for (let i2 = 2; i2 < punti.length; i2 += 2) {
+        const x = vx(punti[i2])
+        const y = vy(punti[i2 + 1])
+        salti.push([x - px, y - py])
+        px = x
+        py = y
+      }
+      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+    }
+    for (const t of testi) {
+      doc.setFontSize((Math.max(2, t.altezza * k) * 72) / 25.4)
+      doc.text(t.testo, vx(t.x), vy(t.y))
+    }
+  }
+
+  const legenda = disegnaLegenda(doc, {
+    x: margine + areaL + 6,
+    y: margine,
+    larghezza: LEGENDA_MM - 6,
+    altezza: areaA,
+    simboli,
+    layer: [...layerInVista.keys()],
+    modello,
+    mostraLayer: o.conLayer !== false,
+  })
+
+  cartiglio(doc, {
+    LF, AF, margine,
+    titolo: o.titolo || 'Tavola',
+    nomeFile: modello.nomeFile,
+    spazio: spazio.nome,
+    scala,
+    unita: modello.unita,
+    formato: opz.formato,
+  })
+
+  return { blob: doc.output('blob'), arrayBuffer: () => doc.output('arraybuffer'), scala, disegnate, legenda }
+}
+
+function disegnaLegenda(doc, d) {
+  doc.setDrawColor('#000000')
+  doc.setLineWidth(0.3)
+  doc.rect(d.x, d.y, d.larghezza, d.altezza)
+  doc.setTextColor('#000000')
+  doc.setFontSize(9)
+  doc.text('LEGENDA', d.x + 3, d.y + 6)
+  doc.setLineWidth(0.2)
+  doc.line(d.x + 3, d.y + 7.5, d.x + d.larghezza - 3, d.y + 7.5)
+
+  let y = d.y + 13
+  let voci = 0
+  doc.setFontSize(7)
+
+  for (const [id, quante] of [...d.simboli].sort((a, b) => b[1] - a[1])) {
+    const s = PER_ID[id]
+    if (!s || y > d.y + d.altezza - 8) continue
+    const colore = CATEGORIE[s.cat].colore
+    doc.setDrawColor(colore)
+    doc.setLineWidth(0.25)
+    // Il simbolo si ridisegna dalle sue forme, non da un'immagine: in legenda
+    // dev'essere lo stesso segno che sta in tavola.
+    for (const f of formeSimbolo(id)) {
+      const salti = []
+      let px = d.x + 3 + f[0] * 6
+      let py = y + 5 - f[1] * 6
+      const ix = px
+      const iy = py
+      for (let i = 2; i < f.length; i += 2) {
+        const x = d.x + 3 + f[i] * 6
+        const yy = y + 5 - f[i + 1] * 6
+        salti.push([x - px, yy - py])
+        px = x
+        py = yy
+      }
+      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+    }
+    doc.setTextColor('#000000')
+    doc.text(`${s.nome}${quante > 1 ? `  ×${quante}` : ''}`, d.x + 11, y + 4)
+    y += 8
+    voci++
+  }
+
+  if (d.mostraLayer && d.layer.length) {
+    y += 2
+    doc.setTextColor('#000000')
+    doc.setFontSize(8)
+    doc.text('Layer del disegno', d.x + 3, y + 3)
+    y += 6
+    doc.setFontSize(7)
+    const perNome = new Map(d.modello.layer.map((l) => [l.nome, l]))
+    for (const nome of d.layer.sort()) {
+      if (y > d.y + d.altezza - 5) break
+      const colore = risolviInchiostro(coloreLayer(perNome.get(nome)), true)
+      doc.setFillColor(colore)
+      doc.rect(d.x + 3, y - 2, 4, 2.4, 'F')
+      doc.setTextColor('#000000')
+      doc.text(nome.length > 26 ? nome.slice(0, 25) + '…' : nome, d.x + 9, y)
+      y += 5
+      voci++
+    }
+  }
+
+  return voci
+}
+
+function cartiglio(doc, d) {
+  const y = d.AF - d.margine - 4
+  doc.setDrawColor('#000000')
+  doc.setLineWidth(0.3)
+  doc.line(d.margine, y - 6, d.LF - d.margine, y - 6)
+  doc.setTextColor('#000000')
+  doc.setFontSize(10)
+  doc.text(d.titolo, d.margine, y - 0.5)
+  doc.setFontSize(7)
+  const unita = d.unita.dichiarate ? d.unita.nome : 'unità non dichiarate nel file'
+  doc.text(`${d.nomeFile} — ${d.spazio}`, d.margine, y + 4)
+  doc.text(`scala 1:${d.scala} · ${d.formato} · disegno in ${unita}`, d.LF / 2, y + 4, { align: 'center' })
+  doc.text(new Date().toLocaleDateString('it-IT'), d.LF - d.margine, y + 4, { align: 'right' })
 }

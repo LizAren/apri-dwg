@@ -18,6 +18,8 @@ import { normalizza, calcolaEstensione } from '../src/modello/normalizza.js'
 import { esportaPdf, esportaPdfMultiplo, eNormalizzata } from '../src/esporta/pdf.js'
 import { esportaDxf } from '../src/esporta/dxf.js'
 import { confronta } from '../src/modello/confronto.js'
+import { SIMBOLI, formeSimbolo, CATEGORIE, coloreDi } from '../src/modello/simboli.js'
+import { geometriaNota } from '../src/modello/note.js'
 
 const QUI = dirname(fileURLToPath(import.meta.url))
 const RADICE = join(QUI, '..')
@@ -67,6 +69,62 @@ console.log(`\nVerifica su ${elenco.length} file di prova\n${'─'.repeat(70)}`)
     e[0] === 0 && e[1] === 0 && e[2] === 10 && e[3] === 10,
     `[${e.join(', ')}] invece di [0, 0, 10, 10]`
   )
+}
+
+// ---------------------------------------------------------------------------
+//  La libreria dei simboli, tutta.
+//
+//  Un errore di battitura in una forma non fa rumore: produce un simbolo storto
+//  o vuoto che nessuno guarda finché non finisce stampato su una tavola. Qui si
+//  controlla ogni voce: che disegni qualcosa, che stia nel suo riquadro, che
+//  non abbia coordinate impossibili e che il colore segua la categoria.
+// ---------------------------------------------------------------------------
+{
+  let vuoti = 0
+  let fuori = []
+  let nan = 0
+  let punti = 0
+  const visti = new Set()
+  for (const s of SIMBOLI) {
+    if (visti.has(s.id)) fuori.push(`${s.id} duplicato`)
+    visti.add(s.id)
+    const forme = formeSimbolo(s.id)
+    if (!forme.length) vuoti++
+    for (const f of forme) {
+      if (f.length < 4) vuoti++
+      for (const v of f) {
+        punti++
+        if (!Number.isFinite(v)) nan++
+        // 🔴 Le forme stanno in coordinate 0..1: una fuori da lì sborda dal
+        // riquadro del simbolo e, sul disegno, si sovrappone a quello accanto.
+        else if (v < -0.02 || v > 1.02) fuori.push(`${s.id}: ${v.toFixed(2)}`)
+      }
+    }
+    if (!CATEGORIE[s.cat]) fuori.push(`${s.id}: categoria «${s.cat}» inesistente`)
+  }
+  controlla('simboli: catalogo non vuoto', SIMBOLI.length >= 40, `${SIMBOLI.length} simboli, ${punti} punti`)
+  controlla('simboli: nessuno vuoto', vuoti === 0, `${vuoti} vuoti`)
+  controlla('simboli: nessuna coordinata NaN', nan === 0, `${nan}`)
+  controlla('simboli: tutti dentro il proprio riquadro', fuori.length === 0, fuori.slice(0, 4).join(' · '))
+  controlla('simboli: identificativi unici', visti.size === SIMBOLI.length, `${visti.size}/${SIMBOLI.length}`)
+
+  // Il colore segue la categoria: un idrante verde sarebbe sbagliato due volte.
+  const rosso = SIMBOLI.filter((s) => s.cat === 'antincendio').every((s) => coloreDi(s.id) === CATEGORIE.antincendio.colore)
+  const verde = SIMBOLI.filter((s) => s.cat === 'emergenza').every((s) => coloreDi(s.id) === CATEGORIE.emergenza.colore)
+  controlla('simboli: colore secondo la convenzione della segnaletica', rosso && verde,
+    `antincendio ${CATEGORIE.antincendio.colore}, emergenza ${CATEGORIE.emergenza.colore}`)
+
+  // E messo sul disegno deve finire dove lo si posa, alla misura chiesta.
+  const nota = { tipo: 'simbolo', simbolo: SIMBOLI[0].id, punti: [100, 200], altezza: 50 }
+  const g = geometriaNota(nota, 14)
+  let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity
+  for (const f of g.spezzate) for (let i = 0; i < f.length; i += 2) {
+    minx = Math.min(minx, f[i]); maxx = Math.max(maxx, f[i])
+    miny = Math.min(miny, f[i + 1]); maxy = Math.max(maxy, f[i + 1])
+  }
+  controlla('simboli: posati alla misura chiesta',
+    minx >= 99 && maxx <= 151 && miny >= 199 && maxy <= 251,
+    `ingombro ${minx.toFixed(0)},${miny.toFixed(0)} → ${maxx.toFixed(0)},${maxy.toFixed(0)} (atteso dentro 100,200→150,250)`)
 }
 
 for (const nome of elenco) {
