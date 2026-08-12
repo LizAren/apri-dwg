@@ -90,7 +90,10 @@ function formatoArea(q) {
 
 const strumenti = new Strumenti({
   tela,
-  elenco: $('strumenti'),
+  barra: $('strumenti'),
+  sezioneBarra: $('sez-strumenti'),
+  elenco: $('funzioni'),
+  sezioneElenco: $('sez-funzioni'),
   esito: $('strumento-esito'),
   formato: formatoLunghezza,
   formatoArea,

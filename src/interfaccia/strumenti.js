@@ -24,9 +24,12 @@ export class Strumenti {
   /**
    * @param {object} opzioni  tela, contenitori del DOM, formattatore di misure
    */
-  constructor({ tela, elenco, esito, cambiato, formato, formatoArea, visibile, esporta, chiediAccesso }) {
+  constructor({ tela, barra, sezioneBarra, elenco, sezioneElenco, esito, cambiato, formato, formatoArea, visibile, esporta, chiediAccesso }) {
     this.tela = tela
+    this.barra = barra
+    this.sezioneBarra = sezioneBarra
     this.elenco = elenco
+    this.sezioneElenco = sezioneElenco
     this.esito = esito
     this.cambiato = cambiato || (() => {})
     this.formato = formato
@@ -283,27 +286,49 @@ export class Strumenti {
   // -------------------------------------------------------------------------
 
   /**
-   * UN elenco solo, con le nove funzioni sempre in vista — anche prima di aver
-   * aperto un disegno, perché è lì che si capisce cosa offre la pagina.
+   * Due posti, e la differenza è il disegno aperto.
    *
-   * Due aspetti e basta: quelle accese hanno la SCRITTA azzurra, quelle da
-   * chiedere sono grigie col lucchetto. Niente sfondo colorato sulle accese:
-   * il fondo pieno resta il segnale di «questo strumento è in uso adesso», e
-   * se lo prendessero anche le altre non direbbe più niente.
+   * Prima di aprire un file l'elenco laterale mostra TUTTE e nove le funzioni —
+   * le tue in azzurro, le altre grigie col lucchetto: è lì che si capisce cosa
+   * offre la pagina. Appena c'è un disegno le tue se ne vanno dall'elenco e
+   * compaiono nella barra degli strumenti, dove servono davvero; nell'elenco
+   * restano solo quelle da chiedere.
+   *
+   * Sono due viste dello stesso stato, non due elenchi: una funzione non
+   * compare mai in due posti insieme.
    */
   _disegnaElenco() {
+    const conDisegno = !!this.modello
+
+    // --- barra degli strumenti: solo con un disegno aperto -------------------
+    this.barra.innerHTML = ''
+    for (const f of FUNZIONI) {
+      if (!this.abilitate.has(f.id)) continue
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'attrezzo-tasto'
+      b.setAttribute('aria-pressed', String(this.attivo === f.id))
+      b.innerHTML = `${iconaDi(f.id)}<span>${f.breve || f.nome}</span>`
+      b.addEventListener('click', () => this.attiva(f.id))
+      this.barra.appendChild(b)
+    }
+    if (this.sezioneBarra) {
+      this.sezioneBarra.hidden = !conDisegno || this.barra.children.length === 0
+    }
+
+    // --- elenco laterale ----------------------------------------------------
     this.elenco.innerHTML = ''
     for (const f of FUNZIONI) {
       const accesa = this.abilitate.has(f.id)
+      // Con un disegno aperto le tue stanno nella barra: qui sarebbero doppie.
+      if (accesa && conDisegno) continue
       const b = document.createElement('button')
       b.type = 'button'
       if (accesa) {
         b.className = 'voce accesa'
-        b.setAttribute('aria-pressed', String(this.attivo === f.id))
-        // Prima di aprire un disegno non c'è niente su cui usarle.
-        b.disabled = !this.modello
+        b.disabled = true
+        b.title = 'Apri un disegno per usarla'
         b.innerHTML = `${iconaDi(f.id)}<span class="voce-nome">${f.nome}</span>`
-        b.addEventListener('click', () => this.attiva(f.id))
       } else {
         b.className = 'voce'
         b.setAttribute('aria-label', `${f.nome} — funzione su richiesta`)
@@ -312,6 +337,7 @@ export class Strumenti {
       }
       this.elenco.appendChild(b)
     }
+    if (this.sezioneElenco) this.sezioneElenco.hidden = this.elenco.children.length === 0
   }
 
   _scriviEsito() {

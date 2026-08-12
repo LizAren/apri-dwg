@@ -61,46 +61,55 @@ const icona = (id) =>
 export const FUNZIONI = [
   {
     id: 'misura',
+    breve: 'Misura',
     nome: 'Misura con aggancio',
     che: 'distanze, angoli e aree prese sul disegno, con aggancio a estremi, centri e intersezioni',
   },
   {
     id: 'proprieta',
+    breve: 'Proprietà',
     nome: 'Proprietà al clic',
     che: 'layer, tipo, lunghezza e coordinate dell\'elemento che tocchi',
   },
   {
     id: 'cerca',
+    breve: 'Cerca testo',
     nome: 'Ricerca testo',
     che: 'trova una scritta nel disegno e ti ci porta',
   },
   {
     id: 'dxf',
+    breve: 'Esporta',
     nome: 'Export in DXF e PNG',
     che: 'per riaprire il disegno in un altro CAD, o per infilarlo in un preventivo',
   },
   {
     id: 'note',
+    breve: 'Annota',
     nome: 'Annotazioni',
     che: 'nuvole di revisione, frecce e note sopra il disegno — l\'originale resta intatto',
   },
   {
     id: 'blocchi',
+    breve: 'Blocchi',
     nome: 'Elenco blocchi con conteggio',
     che: 'quante volte compare ogni blocco: un computo grezzo, gratis',
   },
   {
     id: 'tavole',
+    breve: 'Tavole',
     nome: 'Tutti i layout in un PDF solo',
     che: 'invece di una tavola per volta',
   },
   {
     id: 'salva',
+    breve: 'Salva',
     nome: 'Salvataggio e condivisione',
     che: 'ritrovi il disegno la volta dopo e mandi un link con vista, layer e misure',
   },
   {
     id: 'confronto',
+    breve: 'Confronta',
     nome: 'Confronto fra due versioni',
     che: 'le due revisioni affiancate, con le differenze evidenziate',
   },

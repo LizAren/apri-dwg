@@ -192,7 +192,7 @@ await schermata('10-info-aperto', SCRIVANIA, async (p) => {
 })
 
 await schermata('07-accesso', SCRIVANIA, async (p) => {
-  await p.click('#strumenti .voce:not(.accesa)')
+  await p.click('#funzioni .voce:not(.accesa)')
   await p.waitForTimeout(250)
 })
 
@@ -253,21 +253,25 @@ await schermata('11-senza-account', SCRIVANIA, async (p) => {
   // disegno: è lì che si capisce cosa offre la pagina. Senza account sono tutte
   // e nove col lucchetto.
   const prima = await p.evaluate(() => ({
-    voci: document.querySelectorAll('#strumenti .voce').length,
-    accese: document.querySelectorAll('#strumenti .voce.accesa').length,
-    lucchetti: document.querySelectorAll('#strumenti .lucchetto').length,
+    voci: document.querySelectorAll('#funzioni .voce').length,
+    accese: document.querySelectorAll('#funzioni .voce.accesa').length,
+    lucchetti: document.querySelectorAll('#funzioni .lucchetto').length,
+    barra: !document.getElementById('sez-strumenti').hidden,
   }))
   if (prima.voci !== 9) problemi.push(`11: ${prima.voci} funzioni in elenco prima del disegno, attese 9`)
   if (prima.accese !== 0) problemi.push(`11: ${prima.accese} funzioni accese senza account`)
   if (prima.lucchetti !== 9) problemi.push(`11: ${prima.lucchetti} lucchetti, attesi 9`)
+  if (prima.barra) problemi.push('11: la barra degli strumenti si vede senza disegno')
 
   await apri(p, 'prova-geometria.dxf')
   const dopo = await p.evaluate(() => ({
-    voci: document.querySelectorAll('#strumenti .voce').length,
-    accese: document.querySelectorAll('#strumenti .voce.accesa').length,
+    voci: document.querySelectorAll('#funzioni .voce').length,
+    accese: document.querySelectorAll('#funzioni .voce.accesa').length,
+    barra: document.querySelectorAll('#strumenti .attrezzo-tasto').length,
   }))
   if (dopo.accese !== 0) problemi.push(`11: ${dopo.accese} funzioni accese senza account`)
-  return { nota: `prima del disegno ${prima.voci} voci tutte col lucchetto; dopo ${dopo.voci}` }
+  if (dopo.barra !== 0) problemi.push(`11: ${dopo.barra} strumenti nella barra senza account`)
+  return { nota: `prima ${prima.voci} voci col lucchetto, barra nascosta; dopo ${dopo.voci} voci, ${dopo.barra} strumenti` }
 })
 
 await browser.close()
