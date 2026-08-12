@@ -339,6 +339,52 @@ function scarica(blob, nome) {
 }
 
 // ---------------------------------------------------------------------------
+//  Pallino informazioni
+//
+//  Le cose che stavano scritte in fondo alla pagina — privacy, limiti, licenza —
+//  non devono saltare all'occhio, ma devono restare raggiungibili: la GPL-3
+//  chiede che la dichiarazione di licenza ci sia, e nasconderla non è
+//  un'opzione. Sta a un clic, dentro un cerchio che si allunga.
+//
+//  L'altezza si MISURA invece di essere scritta a mano: un numero fisso qui
+//  diventerebbe sbagliato al primo ritocco del testo, e il pannello taglierebbe
+//  l'ultima riga senza che nessuno se ne accorga.
+// ---------------------------------------------------------------------------
+
+const info = $('info')
+const infoTasto = $('info-tasto')
+const infoTesto = $('info-testo')
+
+function apriInfo(aperto) {
+  info.dataset.aperto = String(aperto)
+  infoTasto.setAttribute('aria-expanded', String(aperto))
+  info.style.height = aperto ? `${infoTesto.scrollHeight}px` : ''
+}
+
+infoTasto.addEventListener('click', (e) => {
+  e.stopPropagation()
+  apriInfo(info.dataset.aperto !== 'true')
+})
+
+// Un clic fuori chiude. Dentro no, altrimenti non si potrebbero seguire i link.
+document.addEventListener('click', (e) => {
+  if (info.dataset.aperto === 'true' && !info.contains(e.target)) apriInfo(false)
+})
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && info.dataset.aperto === 'true') {
+    apriInfo(false)
+    infoTasto.focus()
+  }
+})
+
+// Se la finestra cambia misura mentre è aperto, il testo si reimpagina e
+// l'altezza misurata prima non vale più.
+new ResizeObserver(() => {
+  if (info.dataset.aperto === 'true') info.style.height = `${infoTesto.scrollHeight}px`
+}).observe(infoTesto)
+
+// ---------------------------------------------------------------------------
 
 montaBloccate($('bloccate'), $('finestra-accesso'))
 

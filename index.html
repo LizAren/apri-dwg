@@ -119,6 +119,43 @@
         <p class="errore" id="errore" hidden></p>
 
         <div class="scala-schermo" id="scala-schermo" hidden></div>
+
+        <!-- Pallino informazioni: chiuso è un cerchio, aperto si allunga.
+             Ci sta la dichiarazione di licenza, che la GPL-3 richiede sia
+             raggiungibile: è a un clic, non nascosta. -->
+        <div class="info" id="info" data-aperto="false">
+          <div class="info-testo" id="info-testo">
+            <p>
+              <strong>Il disegno non lascia il tuo computer.</strong> Si apre qui
+              dentro, nel browser: non viene caricato su nessun server, non passa
+              da internet e non resta da nessuna parte. Chiudendo la pagina
+              sparisce. Nessun account, nessun cookie di profilazione.
+            </p>
+            <p>
+              È un'anteprima di lettura, non sostituisce il CAD: quello che non
+              si è potuto disegnare è scritto nel rapporto di lettura. Il DWG
+              viene letto, mai riscritto.
+            </p>
+            <p class="info-licenza">
+              Usa <strong>GNU LibreDWG</strong> ed è software libero sotto
+              licenza <a href="./LICENSE">GPL-3.0</a>.
+              <a href="https://github.com/LizAren/apri-dwg">Sorgente di questa pagina</a> ·
+              <a href="https://github.com/LibreDWG/libredwg">sorgente di LibreDWG</a> ·
+              <a href="../index.html">Stefano Fostinelli</a>
+            </p>
+          </div>
+          <button
+            type="button"
+            class="info-tasto"
+            id="info-tasto"
+            aria-expanded="false"
+            aria-controls="info-testo"
+            aria-label="Informazioni su privacy e licenza"
+            title="Informazioni"
+          >
+            <span aria-hidden="true">i</span>
+          </button>
+        </div>
       </div>
     </main>
 
@@ -192,18 +229,5 @@
       </div>
     </dialog>
 
-    <footer class="piede">
-      <p>
-        Il disegno non lascia il tuo computer. Nessun caricamento, nessun account,
-        nessun cookie di profilazione.
-      </p>
-      <p>
-        Questo strumento usa <strong>GNU LibreDWG</strong> ed è software libero
-        sotto licenza <a href="./LICENSE">GPL-3.0</a>.
-        <a href="https://github.com/LizAren/apri-dwg">Sorgente di questa pagina</a> ·
-        <a href="https://github.com/LibreDWG/libredwg">sorgente di LibreDWG</a> ·
-        <a href="../index.html">Stefano Fostinelli</a>
-      </p>
-    </footer>
   </body>
 </html>
