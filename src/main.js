@@ -125,6 +125,7 @@ const strumenti = new Strumenti({
         // è il caso più frequente e non deve chiedere un passaggio in più.
         viste: scelte.viste?.length ? scelte.viste : [{ rett: [x0, y0, x1, y1], nome: '' }],
         titolo: scelte.titolo,
+        campi: scelte.campi,
         conLayer: scelte.conLayer,
       })
       scarica(esito.blob, base(modello) + '-tavola.pdf')

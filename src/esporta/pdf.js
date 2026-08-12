@@ -390,7 +390,7 @@ export async function esportaTavola(modello, spazio, o) {
   const MARGINE = opz.margine
   const RESPIRO = 5
   const COLONNA = 62
-  const ALTEZZA_CARTIGLIO = 34
+  const ALTEZZA_CARTIGLIO = 58
 
   const utileL = LF - MARGINE * 2 - COLONNA - RESPIRO
   const utileA = AF - MARGINE * 2
@@ -407,17 +407,33 @@ export async function esportaTavola(modello, spazio, o) {
     const col = i % g.colonne
     const x0 = MARGINE + col * (g.l + RESPIRO)
     const y0 = MARGINE + riga * (g.a + RESPIRO)
-    const r = viste[i].rett
-    const largo = Math.max(1e-9, r[2] - r[0])
-    const alto = Math.max(1e-9, r[3] - r[1])
+    const scelta = viste[i].rett
+    const cellaL = g.l
+    const cellaA = g.a - 6
+    const largo = Math.max(1e-9, scelta[2] - scelta[0])
+    const alto = Math.max(1e-9, scelta[3] - scelta[1])
     const scala = opz.scala || scalaNormalizzata(
-      Math.max((largo * mmPerUnita) / g.l, (alto * mmPerUnita) / (g.a - 6))
+      Math.max((largo * mmPerUnita) / cellaL, (alto * mmPerUnita) / cellaA)
     )
     const k = mmPerUnita / scala
-    const cx = x0 + (g.l - largo * k) / 2
-    const cy = y0 + (g.a - 6 - alto * k) / 2
-    const vx = (x) => cx + (x - r[0]) * k
-    const vy = (y) => cy + (r[3] - y) * k
+
+    // 🔴 La cella si riempie di disegno, non di bianco.
+    //
+    // La scala normalizzata arrotonda sempre per eccesso: fra il 1:5 che
+    // servirebbe e il 1:10 che si dichiara ci può stare il doppio dello
+    // spazio, e centrando l'inquadratura scelta quella differenza resta
+    // margine vuoto. Invece di rimpicciolire il disegno si ALLARGA il
+    // riquadro attorno allo stesso centro fino a coprire esattamente la
+    // cella: la scala resta quella dichiarata — che è il dato con cui
+    // qualcuno misurerà — e si vede più disegno invece di più carta.
+    const mondoL = cellaL / k
+    const mondoA = cellaA / k
+    const mx = (scelta[0] + scelta[2]) / 2
+    const my = (scelta[1] + scelta[3]) / 2
+    const r = [mx - mondoL / 2, my - mondoA / 2, mx + mondoL / 2, my + mondoA / 2]
+
+    const vx = (x) => x0 + (x - r[0]) * k
+    const vy = (y) => y0 + (r[3] - y) * k
 
     doc.setDrawColor('#8a8a8a')
     doc.setLineWidth(0.25)
@@ -446,9 +462,16 @@ export async function esportaTavola(modello, spazio, o) {
   })
   cartiglio(doc, {
     x: xd, y: MARGINE + hLegenda + RESPIRO, larghezza: COLONNA, altezza: ALTEZZA_CARTIGLIO,
-    titolo: o.titolo || 'Tavola',
-    nomeFile: modello.nomeFile, spazio: spazio.nome,
-    scale, unita: modello.unita, formato: opz.formato,
+    campi: {
+      ...(o.campi || {}),
+      titolo: o.titolo || o.campi?.titolo || 'Tavola',
+      // Scala e formato NON si chiedono: li sa il programma, e un campo
+      // compilato a mano che contraddice il disegno è peggio di uno vuoto.
+      scala: [...new Set(scale)].map((x) => `1:${x}`).join(' · '),
+      formato: opz.formato,
+      unita: modello.unita.dichiarate ? modello.unita.nome : 'non dichiarate',
+      file: modello.nomeFile,
+    },
   })
 
   return {
@@ -625,30 +648,56 @@ function disegnaLegenda(doc, d) {
   return voci
 }
 
-/** Il cartiglio: i dati senza i quali una tavola stampata non si usa. */
+/**
+ * Il cartiglio, nell'angolo in basso a destra come su una tavola vera: celle
+ * squadrate con l'etichetta piccola sopra e il valore sotto.
+ *
+ * 🔴 Il riquadro del logo resta VUOTO di proposito. Chi stampa ci mette il
+ * proprio: un logo finto su una tavola è peggio di uno spazio bianco, perché
+ * quella tavola poi gira.
+ *
+ * ⚠️ Scala e formato non sono compilabili: li sa il programma. Un campo
+ * riempito a mano che contraddice il disegno è peggio di uno vuoto, e su un
+ * cartiglio la scala è il dato che qualcuno userà per misurare.
+ */
 function cartiglio(doc, d) {
-  doc.setDrawColor('#282828')
-  doc.setLineWidth(0.35)
-  doc.line(d.x, d.y, d.x + d.larghezza, d.y)
+  const c = d.campi || {}
+  doc.setDrawColor('#1e1e1e')
+  doc.setLineWidth(0.5)
+  doc.rect(d.x, d.y, d.larghezza, d.altezza)
 
-  doc.setTextColor('#141414')
-  doc.setFontSize(10)
-  doc.text(d.titolo, d.x, d.y + 6, { maxWidth: d.larghezza })
+  const hLogo = 14
+  doc.setLineWidth(0.3)
+  doc.rect(d.x, d.y, d.larghezza, hLogo)
+  doc.setFontSize(5.6)
+  doc.setTextColor('#9a9a9a')
+  doc.text('(logo e intestazione)', d.x + 2.5, d.y + hLogo / 2 + 1.4)
 
-  doc.setFontSize(6.6)
-  doc.setTextColor('#4a4a4a')
-  const unita = d.unita.dichiarate ? d.unita.nome : 'unità non dichiarate nel file'
-  const scale = [...new Set(d.scale)].map((s) => `1:${s}`).join(' · ')
   const righe = [
-    d.nomeFile,
-    `spazio: ${d.spazio}`,
-    `scala ${scale}`,
-    `disegno in ${unita}`,
-    `${d.formato} · ${new Date().toLocaleDateString('it-IT')}`,
+    [['Committente', c.committente], ['Comune', c.comune]],
+    [['Oggetto', c.oggetto]],
+    [['Titolo della tavola', c.titolo]],
+    [['Scala', c.scala], ['Formato', c.formato], ['Tav. n.', c.numero]],
+    [['Data', c.data], ['Redatto da', c.redattore], ['Rev.', c.revisione]],
   ]
-  let y = d.y + 12
-  for (const r of righe) {
-    doc.text(r, d.x, y, { maxWidth: d.larghezza })
-    y += 4
+
+  const hRiga = (d.altezza - hLogo) / righe.length
+  let cy = d.y + hLogo
+
+  for (const celle of righe) {
+    const larga = d.larghezza / celle.length
+    celle.forEach((cella, i) => {
+      const cx = d.x + larga * i
+      doc.setDrawColor('#787878')
+      doc.setLineWidth(0.2)
+      doc.rect(cx, cy, larga, hRiga)
+      doc.setFontSize(5)
+      doc.setTextColor('#7a7a7a')
+      doc.text(String(cella[0]).toUpperCase(), cx + 1.8, cy + 3.2)
+      doc.setFontSize(7)
+      doc.setTextColor('#141414')
+      doc.text(String(cella[1] || '—'), cx + 1.8, cy + hRiga - 2, { maxWidth: larga - 3.6 })
+    })
+    cy += hRiga
   }
 }

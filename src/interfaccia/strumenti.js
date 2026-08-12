@@ -56,6 +56,13 @@ export class Strumenti {
     this.trascina = null
     this.spazioPrima = null
     this.viste = []
+    // I dati del cartiglio si ricordano fra una tavola e l'altra: chi ne
+    // stampa cinque non riscrive cinque volte committente e oggetto.
+    this.cartiglio = {
+      committente: '', comune: '', oggetto: '', titolo: 'Planimetria',
+      numero: '1', data: new Date().toLocaleDateString('it-IT'),
+      redattore: '', revisione: '0',
+    }
     this.tipoNota = 'nuvola'
     this.simboloScelto = null
     this.cercaSimbolo = ''
@@ -126,6 +133,13 @@ export class Strumenti {
       this.spazio = this.spazioPrima
       this.spazioPrima = null
     this.viste = []
+    // I dati del cartiglio si ricordano fra una tavola e l'altra: chi ne
+    // stampa cinque non riscrive cinque volte committente e oggetto.
+    this.cartiglio = {
+      committente: '', comune: '', oggetto: '', titolo: 'Planimetria',
+      numero: '1', data: new Date().toLocaleDateString('it-IT'),
+      redattore: '', revisione: '0',
+    }
       this.indice = null
       this.tela.mostra(this.spazio)
     }
@@ -924,8 +938,27 @@ export class Strumenti {
               .join('') +
             '</div>'
           : '<p class="nota">Nessuna vista aggiunta: si stamperà quella che vedi adesso.</p>') +
-        '<input type="text" id="tav-titolo" class="campo" placeholder="titolo della tavola" ' +
-        `value="${sicuro(this.titoloTavola || 'Planimetria')}" autocomplete="off">` +
+        '<div class="cartiglio-campi">' +
+        [
+          ['committente', 'Committente'],
+          ['comune', 'Comune'],
+          ['oggetto', 'Oggetto'],
+          ['titolo', 'Titolo della tavola'],
+          ['numero', 'Tavola n.'],
+          ['data', 'Data'],
+          ['redattore', 'Redatto da'],
+          ['revisione', 'Rev.'],
+        ]
+          .map(
+            ([id, et]) =>
+              `<label class="campo-cartiglio"><span>${et}</span>` +
+              `<input type="text" class="campo" data-cartiglio="${id}" ` +
+              `value="${sicuro(this.cartiglio[id] || '')}" autocomplete="off"></label>`
+          )
+          .join('') +
+        '</div>' +
+        `<p class="nota">Scala e formato non si scrivono a mano: li mette il ` +
+        `programma. Il riquadro del logo resta vuoto, ci va il tuo.</p>` +
         '<div class="riga interruttori"><label><input type="checkbox" id="tav-layer" checked> ' +
         'elenca anche i layer del disegno</label></div>' +
         '<button type="button" class="comando primario" id="tav-fai">Genera la tavola</button>' +
@@ -944,15 +977,18 @@ export class Strumenti {
           this._scriviEsito()
         })
       }
-      e.querySelector('#tav-titolo').addEventListener('input', (ev) => {
-        this.titoloTavola = ev.target.value
-      })
+      for (const campo of e.querySelectorAll('[data-cartiglio]')) {
+        campo.addEventListener('input', () => {
+          this.cartiglio[campo.dataset.cartiglio] = campo.value
+        })
+      }
       e.querySelector('#tav-fai').addEventListener('click', async (ev) => {
         ev.target.disabled = true
         ev.target.textContent = 'Genero…'
         try {
           const r = await this.esporta.tavola?.({
-            titolo: e.querySelector('#tav-titolo').value.trim() || 'Tavola',
+            titolo: this.cartiglio.titolo || 'Tavola',
+            campi: { ...this.cartiglio },
             conLayer: e.querySelector('#tav-layer').checked,
             viste: this.viste.slice(),
           })
@@ -988,13 +1024,38 @@ export class Strumenti {
         if (!perCat.has(x.cat)) perCat.set(x.cat, [])
         perCat.get(x.cat).push(x)
       }
+      // I simboli già posati stanno QUI, non solo nel pannello delle
+      // annotazioni: si mettono da questa schermata ed è da questa schermata
+      // che si vuole toglierli, senza dover indovinare in quale altro pannello
+      // siano finiti.
+      const posati = this.noteQui()
+        .map((n, i) => ({ n, i }))
+        .filter((x) => x.n.tipo === 'simbolo')
+
       e.innerHTML =
+        (posati.length
+          ? `<div class="posati"><h3>Simboli posati (${posati.length})</h3>` +
+            '<div class="cerca-esiti">' +
+            posati
+              .map(
+                ({ n, i }) =>
+                  `<div class="esito-riga${i === this.notaScelta ? ' scelta' : ''}" data-scegli="${i}">` +
+                  anteprimaSimbolo(n.simbolo, n.colore) +
+                  `<span class="esito-testo">${sicuro(PER_ID[n.simbolo]?.nome || 'simbolo')}</span>` +
+                  `<button type="button" class="mini" data-togli="${i}">togli</button></div>`
+              )
+              .join('') +
+            '</div>' +
+            '<button type="button" class="mini" id="simb-svuota">togli tutti</button></div>'
+          : '') +
         '<input type="search" id="simb-cerca" class="campo" placeholder="cerca un simbolo…" ' +
         `value="${sicuro(this.cercaSimbolo)}" autocomplete="off">` +
         `<p class="nota">${
           this.creazioneArmata && this.tipoNota === 'simbolo'
             ? 'Clicca sul disegno dove va il simbolo.'
-            : 'Scegli un simbolo, poi clicca sul disegno. Si ridimensiona dalla maniglia.'
+            : 'Scegli un simbolo, poi clicca sul disegno. Uno già posato si sceglie ' +
+              'cliccandolo: si sposta trascinandolo, si ridimensiona dalla maniglia e ' +
+              'Canc lo elimina.'
         }</p>` +
         [...perCat]
           .map(
@@ -1013,6 +1074,34 @@ export class Strumenti {
           )
           .join('') +
         (scelti.length ? '' : '<p class="nota">Nessun simbolo con questo nome.</p>')
+
+      for (const r of e.querySelectorAll('[data-scegli]')) {
+        r.addEventListener('click', (ev) => {
+          if (ev.target.matches('[data-togli]')) return
+          this.notaScelta = +r.dataset.scegli
+          this._scriviEsito()
+          this.tela.ridisegna()
+        })
+      }
+      for (const b of e.querySelectorAll('[data-togli]')) {
+        b.addEventListener('click', () => {
+          this.noteQui().splice(+b.dataset.togli, 1)
+          this.notaScelta = -1
+          this._scriviEsito()
+          this.tela.ridisegna()
+        })
+      }
+      const svuota = e.querySelector('#simb-svuota')
+      if (svuota) {
+        svuota.addEventListener('click', () => {
+          if (!confirm('Togliere tutti i simboli posati su questo spazio?')) return
+          const restanti = this.noteQui().filter((n) => n.tipo !== 'simbolo')
+          this.note.set(this.spazio.id, restanti)
+          this.notaScelta = -1
+          this._scriviEsito()
+          this.tela.ridisegna()
+        })
+      }
 
       const campo = e.querySelector('#simb-cerca')
       campo.addEventListener('input', () => {
