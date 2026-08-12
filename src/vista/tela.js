@@ -130,7 +130,7 @@ export class Tela {
     const ctx = this.ctx
     const l = this.canvas.clientWidth
     const a = this.canvas.clientHeight
-    ctx.fillStyle = this.fondoChiaro ? '#ffffff' : '#12161c'
+    ctx.fillStyle = this.fondoChiaro ? '#ffffff' : '#0c0f13'
     ctx.fillRect(0, 0, l, a)
     if (!this.spazio) return
 
@@ -200,7 +200,7 @@ export class Tela {
         const sx = cxs + (t.x - this.cx) * zoom
         const sy = cys - (t.y - this.cy) * zoom
         ctx.fillStyle = risolviInchiostro(t.colore, this.fondoChiaro)
-        ctx.font = `${h.toFixed(1)}px ui-sans-serif, system-ui, sans-serif`
+        ctx.font = `${h.toFixed(1)}px "Public Sans", ui-sans-serif, system-ui, sans-serif`
         ctx.textAlign = ['left', 'center', 'right'][t.allineamento] || 'left'
         if (t.rotazione) {
           ctx.save()
@@ -214,6 +214,11 @@ export class Tela {
         disegnate++
       }
     }
+
+    // Gli strumenti disegnano sopra il disegno: aggancio, misure, evidenziato.
+    // Sta qui e non in un secondo canvas perché così l'ordine è garantito e
+    // non c'è un secondo contesto da tenere allineato al variare dello zoom.
+    this.sovrapposizione?.(ctx, this)
 
     this.ultimoDisegnate = disegnate
     this.onDisegnato?.(disegnate)

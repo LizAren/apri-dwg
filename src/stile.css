@@ -443,14 +443,29 @@ a {
   background: var(--carta-alta);
   color: var(--attenuato);
 }
-/* Il lucchetto NON prende l'accento: è uno stato, non un invito. */
+/* L'icona dello strumento è la parte che deve attirare: sta a sinistra, grande
+   abbastanza da riconoscersi, e si accende al passaggio. */
+.bloccate .attrezzo {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  color: var(--tenue);
+  transition: color 0.18s var(--uscita);
+}
+.bloccate .voce:hover .attrezzo {
+  color: var(--blu-chiaro);
+}
+.bloccate .voce-nome {
+  flex: 1;
+  min-width: 0;
+}
+/* Il lucchetto NON prende l'accento e resta piccolo: è uno stato, non un
+   invito luminoso. */
 .bloccate .lucchetto {
   flex: none;
-  width: 15px;
-  height: 15px;
-  opacity: 0.6;
-  margin-left: auto;
-  order: 2;
+  width: 14px;
+  height: 14px;
+  opacity: 0.45;
 }
 
 /* --- Tela ---------------------------------------------------------------- */
@@ -566,21 +581,36 @@ a {
   position: absolute;
   left: 14px;
   bottom: 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--attenuato);
-  background: var(--carta);
-  border-radius: var(--r-riga);
-  padding: 6px 12px;
+  padding: 7px 10px 5px;
   pointer-events: none;
-  box-shadow: var(--ombra-corta);
+  /* Fondo appena percettibile: serve solo a staccare la barra dal disegno,
+     non a farne una scheda. */
+  background: rgba(12, 15, 19, 0.82);
+  border-radius: 3px;
+  color: var(--inchiostro);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1;
+  display: grid;
+  grid-template-areas: 'barra barra' 'zero fine';
+  justify-items: start;
+  gap: 4px 0;
 }
-.scala-schermo .riga {
+/* 🔴 L'unico elemento della pagina SENZA angoli smussati: è uno strumento di
+   misura, e su una tacca un angolo tondo è una tacca che mente. */
+.scala-disegno {
+  grid-area: barra;
   display: block;
-  height: 4px;
-  border: 1px solid var(--attenuato);
-  border-top: none;
-  margin-top: 3px;
+  overflow: visible;
+}
+.scala-zero {
+  grid-area: zero;
+  opacity: 0.75;
+}
+.scala-fine {
+  grid-area: fine;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 /* --- Pallino informazioni ------------------------------------------------- */
@@ -813,5 +843,121 @@ a {
   .comandi .comando {
     flex: 1 1 auto;
     padding: 0 12px;
+  }
+}
+
+
+/* --- Strumenti ------------------------------------------------------------ */
+
+.attrezzi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.attrezzo-tasto {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 13px 0 10px;
+  border: none;
+  border-radius: var(--r-pastiglia);
+  background: var(--carta-alta);
+  color: var(--attenuato);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s var(--uscita), color 0.18s var(--uscita);
+}
+.attrezzo-tasto .attrezzo {
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+.attrezzo-tasto:hover {
+  color: var(--inchiostro);
+}
+/* Uno strumento acceso si vede: è l'unico posto dove l'accento dice «stai
+   facendo questo», e serve perché il puntatore cambia comportamento. */
+.attrezzo-tasto[aria-pressed='true'] {
+  background: var(--blu);
+  color: #fff;
+}
+
+.esito {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bordo);
+}
+.esito .nota {
+  margin: 0;
+}
+.esito .rapporto {
+  gap: 7px;
+}
+
+.campo {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--r-pastiglia);
+  background: var(--carta-alta);
+  color: var(--inchiostro);
+  font: inherit;
+  font-size: 14px;
+}
+.campo::placeholder {
+  color: var(--tenue);
+}
+
+.cerca-esiti {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.esito-riga {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--r-riga);
+  background: transparent;
+  color: var(--attenuato);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s var(--uscita), color 0.18s var(--uscita);
+}
+.esito-riga:hover {
+  background: var(--carta-alta);
+  color: var(--inchiostro);
+}
+.esito-testo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.esito-layer {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--tenue);
+}
+
+@media (max-width: 860px) {
+  .attrezzo-tasto,
+  .esito-riga {
+    min-height: 44px;
   }
 }

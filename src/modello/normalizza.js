@@ -107,6 +107,11 @@ export function normalizza(fonte) {
 
 const IDENTITA = [1, 0, 0, 1, 0, 0]
 
+/** Porta un punto del file nelle coordinate del disegno finale. */
+function trasforma(p, m) {
+  return { x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] }
+}
+
 function creaRapporto(fonte) {
   return {
     conteggi: {},
@@ -147,7 +152,17 @@ function disegnaEntita(ent, ctx, m, coloreEreditato) {
   // l'utente che decide se riaccenderlo.
   const colore = coloreEntita(ent, layer, coloreEreditato)
   const spessore = spessoreDi(ent, layer)
-  const comune = { layer: ent.layer || '0', colore, spessore }
+  // 🔴 Da qui in poi la primitiva è geometria pura: se non si porta dietro DA
+  // COSA viene, «proprietà al clic» può dire solo «una spezzata». Il tipo
+  // dell'entità e il suo handle costano due campi e si perdono per sempre se
+  // non si prendono adesso.
+  const comune = {
+    layer: ent.layer || '0',
+    colore,
+    spessore,
+    origine: tipo,
+    handle: ent.handle,
+  }
 
   // 🔴 Rete di sicurezza: se un tipo che dichiariamo di saper disegnare non
   // produce NIENTE, deve finire nel rapporto lo stesso. È così che si è scoperto
@@ -186,16 +201,24 @@ function disegnaEntita(ent, ctx, m, coloreEreditato) {
     }
 
     case 'ARC':
+      // Il centro non è sulla geometria disegnata: se non lo si conserva qui,
+      // l'aggancio al centro di un arco diventa impossibile — dopo la
+      // suddivisione in spezzata quell'informazione non esiste più.
+      comune.centro = trasforma(ent.center, m)
+      comune.raggio = ent.radius * g.scalaDi(m)
       aggiungiSpezzata(ctx, m, comune,
         g.arco(ent.center.x, ent.center.y, ent.radius, ent.startAngle, ent.endAngle), false)
       break
 
     case 'CIRCLE':
+      comune.centro = trasforma(ent.center, m)
+      comune.raggio = ent.radius * g.scalaDi(m)
       aggiungiSpezzata(ctx, m, comune,
         g.cerchio(ent.center.x, ent.center.y, ent.radius), true)
       break
 
     case 'ELLIPSE':
+      comune.centro = trasforma(ent.center, m)
       aggiungiSpezzata(ctx, m, comune, g.ellisse(
         ent.center.x, ent.center.y,
         ent.majorAxisEndPoint.x, ent.majorAxisEndPoint.y,
@@ -425,6 +448,10 @@ function aggiungiSpezzata(ctx, m, comune, punti, chiusa) {
     layer: comune.layer,
     colore: comune.colore,
     spessore: comune.spessore,
+    origine: comune.origine,
+    handle: comune.handle,
+    centro: comune.centro,
+    raggio: comune.raggio,
     pieno: comune.pieno === true,
     punto: comune.punto === true,
     infinita: comune.infinita === true,
@@ -454,6 +481,8 @@ function aggiungiTesto(ctx, m, comune, t) {
     layer: comune.layer,
     colore: comune.colore,
     spessore: comune.spessore,
+    origine: comune.origine,
+    handle: comune.handle,
     ingombro: [
       x - larghezza, y - altezza * 1.5,
       x + larghezza, y + altezza * 1.5,

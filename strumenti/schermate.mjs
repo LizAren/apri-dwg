@@ -54,7 +54,7 @@ await mkdir(USCITA, { recursive: true })
 const browser = await chromium.launch()
 const problemi = []
 
-async function schermata(nome, opzioni, azione) {
+async function schermata(nome, opzioni, azione, query = '') {
   const contesto = await browser.newContext(opzioni)
   const pagina = await contesto.newPage()
   const errori = []
@@ -62,7 +62,7 @@ async function schermata(nome, opzioni, azione) {
   pagina.on('console', (m) => {
     if (m.type() === 'error') errori.push(m.text())
   })
-  await pagina.goto(indirizzo, { waitUntil: 'networkidle' })
+  await pagina.goto(indirizzo + query, { waitUntil: 'networkidle' })
   const esito = (await azione?.(pagina)) || {}
   await pagina.screenshot({ path: join(USCITA, `${nome}.png`) })
   if (errori.length) problemi.push(`${nome}: ${errori.join(' | ')}`)
@@ -224,6 +224,92 @@ await schermata('08-telefono', TELEFONO, async (p) => {
       `scorrimento ${misure.largo || misure.alto ? 'SÌ' : 'no'} · barra ${misure.barraVisibile ? 'visibile' : 'FUORI'}`,
   }
 })
+
+// ---------------------------------------------------------------------------
+//  Gli strumenti, misurati su una geometria di cui si conosce la risposta.
+//
+//  `prova-geometria.dxf` ha una linea da (0,0) a (100,0) sul layer MURI: cento
+//  millimetri, cioè 10 cm. Le coordinate sullo schermo si ricavano qui dalla
+//  formula dell'inquadratura, quindi il controllo verifica ANCHE che la
+//  trasformazione fra disegno e pixel sia giusta.
+// ---------------------------------------------------------------------------
+
+async function schermo(p, x, y) {
+  const r = await p.evaluate(() => {
+    const c = document.getElementById('tela').getBoundingClientRect()
+    return { x: c.x, y: c.y, w: c.width, h: c.height }
+  })
+  // estensione di prova-geometria.dxf: [0, -50, 500, 510] → 500 x 560
+  const zoom = Math.min(r.w / 500, r.h / 560) * 0.92
+  return [r.x + r.w / 2 + (x - 250) * zoom, r.y + r.h / 2 - (y - 230) * zoom]
+}
+
+await schermata('11-misura', SCRIVANIA, async (p) => {
+  await apri(p, 'prova-geometria.dxf')
+  await p.click('.attrezzo-tasto')
+  const a = await schermo(p, 0, 0)
+  const b = await schermo(p, 100, 0)
+  await p.mouse.click(a[0], a[1])
+  await p.mouse.move(b[0], b[1])
+  await p.mouse.click(b[0], b[1])
+  await p.waitForTimeout(300)
+  const voci = await p.evaluate(() =>
+    [...document.querySelectorAll('#strumento-esito dt')].map((d, i) =>
+      [d.textContent, document.querySelectorAll('#strumento-esito dd')[i].textContent])
+  )
+  const m = Object.fromEntries(voci)
+  // 🔴 La linea è lunga 100 mm: se l'aggancio agli estremi funziona la misura
+  // dev'essere esattamente 10 cm, non «circa».
+  if (m.distanza !== '10 cm') problemi.push(`11: distanza ${m.distanza}, attesa 10 cm`)
+  if (m.angolo !== '0.00°' && m.angolo !== '360.00°') problemi.push(`11: angolo ${m.angolo}, atteso 0`)
+  if (!/estremo/.test(m.agganci || '')) problemi.push(`11: non ha agganciato gli estremi (${m.agganci})`)
+  return { nota: `distanza ${m.distanza} · angolo ${m.angolo} · agganci ${m.agganci}` }
+}, '?f=tutte')
+
+await schermata('12-proprieta', SCRIVANIA, async (p) => {
+  await apri(p, 'prova-geometria.dxf')
+  const tasti = await p.$$('.attrezzo-tasto')
+  await tasti[1].click()
+  const meta = await schermo(p, 50, 0)
+  await p.mouse.click(meta[0], meta[1])
+  await p.waitForTimeout(300)
+  const voci = await p.evaluate(() =>
+    [...document.querySelectorAll('#strumento-esito dt')].map((d, i) =>
+      [d.textContent, document.querySelectorAll('#strumento-esito dd')[i].textContent])
+  )
+  const m = Object.fromEntries(voci)
+  if (m.tipo !== 'LINE') problemi.push(`12: tipo ${m.tipo}, atteso LINE`)
+  if (m.layer !== 'MURI') problemi.push(`12: layer ${m.layer}, atteso MURI`)
+  if (m.lunghezza !== '10 cm') problemi.push(`12: lunghezza ${m.lunghezza}, attesa 10 cm`)
+  return { nota: `${m.tipo} su ${m.layer}, lunga ${m.lunghezza}` }
+}, '?f=tutte')
+
+await schermata('13-cerca', SCRIVANIA, async (p) => {
+  await apri(p, 'prova-geometria.dxf')
+  const tasti = await p.$$('.attrezzo-tasto')
+  await tasti[2].click()
+  await p.fill('#cerca-campo', 'prova')
+  await p.waitForTimeout(300)
+  const n = await p.evaluate(() => document.querySelectorAll('.esito-riga').length)
+  if (n !== 1) problemi.push(`13: trovati ${n} testi, atteso 1`)
+  if (n) {
+    await p.click('.esito-riga')
+    await p.waitForTimeout(400)
+  }
+  return { nota: `${n} risultato/i, e il clic porta in vista` }
+}, '?f=tutte')
+
+await schermata('14-bloccate-restanti', SCRIVANIA, async (p) => {
+  await apri(p, 'prova-geometria.dxf')
+  const r = await p.evaluate(() => ({
+    strumenti: document.querySelectorAll('.attrezzo-tasto').length,
+    bloccate: document.querySelectorAll('#bloccate .voce').length,
+  }))
+  // Le tre accese non devono comparire anche fra quelle da chiedere.
+  if (r.strumenti !== 3) problemi.push(`14: ${r.strumenti} strumenti accesi, attesi 3`)
+  if (r.bloccate !== 6) problemi.push(`14: ${r.bloccate} funzioni bloccate, attese 6`)
+  return { nota: `${r.strumenti} strumenti accesi, ${r.bloccate} ancora bloccate` }
+}, '?f=tutte')
 
 await browser.close()
 server.close()

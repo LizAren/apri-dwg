@@ -17,6 +17,47 @@
 
 const MAIL = 'fostinellistefano@gmail.com'
 
+/**
+ * Le icone sono DISEGNATE qui, non prese da una libreria: una sola griglia
+ * (24), un solo tratto (1,6), estremi arrotondati. Una raccolta pronta —
+ * Lucide, Heroicons — si riconosce a colpo d'occhio ed è uno dei segnali che
+ * `docs/contesto/estetica.md` elenca fra quelli da evitare: fa sembrare il sito
+ * montato in mezz'ora. Queste invece dicono *quale* strumento è: il righello ha
+ * le tacche, la quota ha le frecce, il confronto ha due tavole sovrapposte.
+ */
+const D = {
+  misura:
+    '<path d="M3 9h18v6H3z"/><path d="M7.5 9v3M12 9v4M16.5 9v3"/>',
+  proprieta:
+    '<path d="M3 4.5h9v9H3z"/><path d="M15.5 7h5.5M15.5 11h5.5M15.5 15h3.5"/>' +
+    '<path d="M12 13.5l4 6 1.2-2.6 2.6-1.2z" fill="currentColor"/>',
+  cerca:
+    '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L21 21"/>' +
+    '<path d="M7.8 9h5.4M7.8 12h3.4"/>',
+  dxf:
+    '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>' +
+    '<path d="M12 10.5v6M9.4 14l2.6 2.6 2.6-2.6"/>',
+  note:
+    '<path d="M4 20l1-3.6L15.6 5.8a1.7 1.7 0 0 1 2.4 0l1.2 1.2a1.7 1.7 0 0 1 0 2.4L8.6 20z"/>' +
+    '<path d="M14.4 7l2.6 2.6"/>',
+  blocchi:
+    '<path d="M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7z"/>' +
+    '<path d="M13.5 13.5h7v7h-7z" stroke-dasharray="2.4 2.2"/>',
+  tavole:
+    '<path d="M3.5 6.5v14h11"/><path d="M8 3.5h8.5l4 4v13H8z"/><path d="M16.5 3.5v4h4"/>',
+  salva:
+    '<path d="M7.2 17.5a4 4 0 0 1 .6-8 5 5 0 0 1 9.2-1.3 3.8 3.8 0 1 1 .5 9.3z"/>' +
+    '<path d="M12 20.5v-7M9.4 16l2.6-2.6 2.6 2.6"/>',
+  confronto:
+    '<path d="M3.5 4.5h17v15h-17z"/><path d="M12 4.5v15"/>' +
+    '<path d="M14.6 9h3.8M14.6 12h3.8M14.6 15h2.4"/>',
+}
+
+const icona = (id) =>
+  `<svg class="attrezzo" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+  `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
+  `${D[id] || ''}</svg>`
+
 export const FUNZIONI = [
   {
     id: 'misura',
@@ -75,16 +116,20 @@ const LUCCHETTO = `<svg class="lucchetto" viewBox="0 0 24 24" fill="none"
 /**
  * Riempie l'elenco delle funzioni bloccate e collega il pannello di richiesta.
  */
-export function montaBloccate(contenitore, finestra) {
+export function montaBloccate(contenitore, finestra, gia = []) {
+  const attive = new Set(gia)
   const titolo = finestra.querySelector('#accesso-titolo')
   const testo = finestra.querySelector('#accesso-testo')
   const mail = finestra.querySelector('#accesso-mail')
 
   for (const f of FUNZIONI) {
+    // Una funzione già accesa non sta fra quelle da chiedere: comparirebbe due
+    // volte, una col lucchetto e una funzionante.
+    if (attive.has(f.id)) continue
     const b = document.createElement('button')
     b.type = 'button'
     b.className = 'voce'
-    b.innerHTML = `${LUCCHETTO}<span>${f.nome}</span>`
+    b.innerHTML = `${icona(f.id)}<span class="voce-nome">${f.nome}</span>${LUCCHETTO}`
     b.setAttribute('aria-label', `${f.nome} — funzione su richiesta`)
     b.addEventListener('click', () => {
       titolo.textContent = f.nome

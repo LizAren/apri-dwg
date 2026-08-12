@@ -21,6 +21,8 @@ import { coloreLayer, risolviInchiostro } from './modello/colori.js'
 import { UNITA, SCELTE_UNITA } from './modello/unita.js'
 import { Tela } from './vista/tela.js'
 import { montaBloccate } from './interfaccia/blocco.js'
+import { Strumenti } from './interfaccia/strumenti.js'
+import { funzioniAbilitate } from './interfaccia/permessi.js'
 import { esportaPdf, SCALE } from './esporta/pdf.js'
 
 const $ = (id) => document.getElementById(id)
@@ -29,6 +31,40 @@ const tela = new Tela($('tela'))
 let modello = null
 let spazioAttivo = null
 let layerVisibili = new Set()
+const abilitate = funzioniAbilitate()
+
+/**
+ * Misure leggibili: la quantità è in unità di disegno, e va portata al
+ * multiplo che una persona legge senza contare gli zeri. Stessa regola della
+ * barra di scala — «500.000 millimetri» in italiano si legge cinquecento.
+ */
+function formatoLunghezza(q) {
+  const mm = modello?.unita?.mm
+  if (!mm) return `${arrotonda(q)} unità`
+  const inMm = q * mm
+  if (inMm >= 1e6) return `${arrotonda(inMm / 1e6)} km`
+  if (inMm >= 1000) return `${arrotonda(inMm / 1000)} m`
+  if (inMm >= 10) return `${arrotonda(inMm / 10)} cm`
+  return `${arrotonda(inMm)} mm`
+}
+
+function formatoArea(q) {
+  const mm = modello?.unita?.mm
+  if (!mm) return `${arrotonda(q)} unità²`
+  const inMq = (q * mm * mm) / 1e6
+  if (inMq >= 10000) return `${arrotonda(inMq / 10000)} ettari`
+  if (inMq >= 0.01) return `${arrotonda(inMq)} m²`
+  return `${arrotonda(inMq * 1e4)} cm²`
+}
+
+const strumenti = new Strumenti({
+  tela,
+  elenco: $('strumenti'),
+  esito: $('strumento-esito'),
+  formato: formatoLunghezza,
+  formatoArea,
+  visibile: (layer) => layerVisibili.has(layer),
+})
 
 // ---------------------------------------------------------------------------
 //  Apertura
@@ -81,6 +117,8 @@ async function apri(file) {
     disegnaSpazi()
     disegnaLayer()
     disegnaRapporto()
+    strumenti.abilita(abilitate)
+    $('sez-strumenti').hidden = abilitate.length === 0
     $('benvenuto').hidden = true
     for (const b of ['btn-tutto', 'btn-fondo', 'btn-pdf']) $(b).disabled = false
   } catch (e) {
@@ -105,6 +143,7 @@ function mostraErrore(testo) {
 function scegliSpazio(spazio) {
   spazioAttivo = spazio
   tela.mostra(spazio)
+  strumenti.perSpazio(spazio)
   for (const b of $('spazi').children) {
     b.setAttribute('aria-current', String(b.dataset.id === String(spazio.id)))
   }
@@ -242,12 +281,47 @@ function aggiornaScala() {
     const esponente = Math.floor(Math.log10(grezza))
     const candidati = [1, 2, 5, 10].map((m) => m * 10 ** esponente)
     const passo = candidati.filter((c) => c <= grezza).pop() ?? candidati[0]
-    const larghezza = passo * tela.zoom
-    el.innerHTML =
-      `${escapa(misura(passo))}<span class="riga" style="width:${larghezza.toFixed(0)}px"></span>`
+    const larghezza = Math.max(48, passo * tela.zoom)
+    el.innerHTML = barraDiScala(larghezza, misura(passo))
   }
   tela.onDisegnato = disegna
   disegna()
+}
+
+/**
+ * Barra di scala nel disegno classico da carta topografica: un nastro diviso in
+ * quattro campi pieni e vuoti alternati, con le tacche agli estremi, lo zero a
+ * sinistra e la misura a destra.
+ *
+ * Non è nostalgia: quel disegno si legge anche a colpo d'occhio perché i campi
+ * alternati permettono di stimare le frazioni senza righello — cosa che una
+ * riga liscia non consente. Ed è l'unico elemento della pagina che NON ha i
+ * bordi smussati: è uno strumento di misura, e un angolo tondo su una tacca è
+ * una tacca che mente.
+ */
+function barraDiScala(larghezza, etichetta) {
+  const L = Math.round(larghezza)
+  const campi = 4
+  const w = L / campi
+  const alto = 7
+  const cima = 5
+  let pieni = ''
+  for (let i = 0; i < campi; i++) {
+    pieni +=
+      `<rect x="${(i * w).toFixed(1)}" y="${cima}" width="${w.toFixed(1)}" height="${alto}" ` +
+      `fill="${i % 2 ? 'none' : 'currentColor'}" stroke="currentColor" stroke-width="1"/>`
+  }
+  return (
+    `<svg class="scala-disegno" width="${L + 2}" height="${cima + alto + 2}" ` +
+    `viewBox="-0.5 0 ${L + 2} ${cima + alto + 2}" aria-hidden="true">` +
+    pieni +
+    // tacche verticali agli estremi e a metà, come sulle carte
+    `<path d="M0 ${cima - 4}V${cima + alto} M${(L / 2).toFixed(1)} ${cima - 2}V${cima + alto} ` +
+    `M${L} ${cima - 4}V${cima + alto}" stroke="currentColor" stroke-width="1" fill="none"/>` +
+    `</svg>` +
+    `<span class="scala-zero">0</span>` +
+    `<span class="scala-fine">${escapa(etichetta)}</span>`
+  )
 }
 
 /**
@@ -386,7 +460,7 @@ new ResizeObserver(() => {
 
 // ---------------------------------------------------------------------------
 
-montaBloccate($('bloccate'), $('finestra-accesso'))
+montaBloccate($('bloccate'), $('finestra-accesso'), abilitate)
 
 const escapa = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
