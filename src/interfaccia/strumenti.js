@@ -55,6 +55,7 @@ export class Strumenti {
     this.notaScelta = -1
     this.trascina = null
     this.spazioPrima = null
+    this.viste = []
     this.tipoNota = 'nuvola'
     this.simboloScelto = null
     this.cercaSimbolo = ''
@@ -124,6 +125,7 @@ export class Strumenti {
     if (this.attivo === 'confronto' && nome !== 'confronto' && this.spazioPrima) {
       this.spazio = this.spazioPrima
       this.spazioPrima = null
+    this.viste = []
       this.indice = null
       this.tela.mostra(this.spazio)
     }
@@ -684,7 +686,14 @@ export class Strumenti {
         const [x, y] = this.tela.aSchermo(punti[k], punti[k + 1])
         ctx.lineTo(x, y)
       }
-      ctx.stroke()
+      // Il campo si riempie, il pittogramma va in chiaro sopra: è così che un
+      // simbolo di sicurezza si legge da lontano.
+      const tinta = punti.chiaro ? '#ffffff' : n.colore
+      ctx.strokeStyle = tinta
+      ctx.fillStyle = tinta
+      ctx.lineWidth = punti.chiaro ? 1.6 : 2
+      if (punti.pieno) ctx.fill()
+      else ctx.stroke()
     }
     for (const t of testi) {
       const [x, y] = this.tela.aSchermo(t.x, t.y)
@@ -900,15 +909,44 @@ export class Strumenti {
     if (this.attivo === 'tavola') {
       e.hidden = false
       e.innerHTML =
-        `<p class="nota">Stampa <strong>quello che si vede adesso</strong>, non ` +
-        `tutto il disegno: sposta e ingrandisci fino a inquadrare la zona, poi ` +
-        `genera. In legenda finisce solo ciò che compare nel riquadro.</p>` +
+        `<p class="nota">Inquadra una zona e aggiungila: puoi metterne più di ` +
+        `una sullo stesso foglio, ognuna con la sua scala. In legenda finisce ` +
+        `solo ciò che compare nei riquadri.</p>` +
+        '<button type="button" class="comando" id="tav-aggiungi">Aggiungi la vista corrente</button>' +
+        (this.viste.length
+          ? '<div class="cerca-esiti">' +
+            this.viste
+              .map(
+                (v, i) =>
+                  `<div class="esito-riga"><span class="esito-testo">${sicuro(v.nome)}</span>` +
+                  `<button type="button" class="mini" data-togli-vista="${i}">togli</button></div>`
+              )
+              .join('') +
+            '</div>'
+          : '<p class="nota">Nessuna vista aggiunta: si stamperà quella che vedi adesso.</p>') +
         '<input type="text" id="tav-titolo" class="campo" placeholder="titolo della tavola" ' +
-        'value="Planimetria" autocomplete="off">' +
+        `value="${sicuro(this.titoloTavola || 'Planimetria')}" autocomplete="off">` +
         '<div class="riga interruttori"><label><input type="checkbox" id="tav-layer" checked> ' +
         'elenca anche i layer del disegno</label></div>' +
         '<button type="button" class="comando primario" id="tav-fai">Genera la tavola</button>' +
         '<div id="tav-esito"></div>'
+
+      e.querySelector('#tav-aggiungi').addEventListener('click', () => {
+        const c = this.tela.canvas
+        const [x0, y1] = this.tela.aDisegno(0, 0)
+        const [x1, y0] = this.tela.aDisegno(c.clientWidth, c.clientHeight)
+        this.viste.push({ rett: [x0, y0, x1, y1], nome: `Vista ${this.viste.length + 1}` })
+        this._scriviEsito()
+      })
+      for (const b of e.querySelectorAll('[data-togli-vista]')) {
+        b.addEventListener('click', () => {
+          this.viste.splice(+b.dataset.togliVista, 1)
+          this._scriviEsito()
+        })
+      }
+      e.querySelector('#tav-titolo').addEventListener('input', (ev) => {
+        this.titoloTavola = ev.target.value
+      })
       e.querySelector('#tav-fai').addEventListener('click', async (ev) => {
         ev.target.disabled = true
         ev.target.textContent = 'Genero…'
@@ -916,17 +954,21 @@ export class Strumenti {
           const r = await this.esporta.tavola?.({
             titolo: e.querySelector('#tav-titolo').value.trim() || 'Tavola',
             conLayer: e.querySelector('#tav-layer').checked,
+            viste: this.viste.slice(),
           })
           if (r) {
             e.querySelector('#tav-esito').innerHTML =
-              `<p class="nota">Scala 1:${r.scala}, ${r.legenda} voci in legenda.</p>`
+              `<p class="nota">${r.viste} vista/e, scale ${[...new Set(r.scale)]
+                .map((x) => `1:${x}`)
+                .join(' · ')}, ${r.legenda} voci in legenda.</p>`
           }
         } catch (err) {
-          e.querySelector('#tav-esito').innerHTML = ''
+          const dove = e.querySelector('#tav-esito')
+          dove.innerHTML = ''
           const p2 = document.createElement('p')
           p2.className = 'nota'
           p2.textContent = err.message
-          e.querySelector('#tav-esito').appendChild(p2)
+          dove.appendChild(p2)
         } finally {
           ev.target.disabled = false
           ev.target.textContent = 'Genera la tavola'
@@ -1213,8 +1255,13 @@ function anteprimaSimbolo(id, colore) {
   const linee = formeSimbolo(id)
     .map((f) => {
       let d = ''
-      for (let i = 0; i < f.length; i += 2) d += (i ? 'L' : 'M') + f[i].toFixed(3) + ' ' + f[i + 1].toFixed(3)
-      return `<path d="${d}"/>`
+      for (let i = 0; i < f.punti.length; i += 2) {
+        d += (i ? 'L' : 'M') + f.punti[i].toFixed(3) + ' ' + f.punti[i + 1].toFixed(3)
+      }
+      const tinta = f.chiaro ? '#ffffff' : colore
+      return f.pieno
+        ? `<path d="${d}Z" fill="${tinta}" stroke="none"/>`
+        : `<path d="${d}" stroke="${tinta}"/>`
     })
     .join('')
   // Le forme hanno y verso l'alto, l'SVG verso il basso: si ribalta una volta.

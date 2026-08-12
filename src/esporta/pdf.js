@@ -209,11 +209,13 @@ function disegnaSpazio(doc, modello, spazio, o) {
   // stampata non sarebbe quella vista.
   for (const n of o.note || []) {
     const { spezzate, testi } = geometriaNota(n, (n.scala || 1) * 14)
-    doc.setDrawColor(n.colore)
     doc.setTextColor(n.colore)
     doc.setLineWidth(0.4)
     for (const punti of spezzate) {
       if (punti.length < 4) continue
+      const tinta = punti.chiaro ? '#ffffff' : n.colore
+      doc.setDrawColor(tinta)
+      doc.setFillColor(tinta)
       const salti = []
       let px = versoX(punti[0])
       let py = versoY(punti[1])
@@ -226,7 +228,7 @@ function disegnaSpazio(doc, modello, spazio, o) {
         px = x
         py = y
       }
-      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+      if (salti.length) doc.lines(salti, ix, iy, [1, 1], punti.pieno ? 'F' : 'S', punti.pieno)
     }
     for (const t of testi) {
       const h = Math.max(2, t.altezza * k)
@@ -364,87 +366,147 @@ import { coloreLayer } from '../modello/colori.js'
 
 const LEGENDA_MM = 58
 
+/**
+ * Una tavola con UNA O PIÙ viste.
+ *
+ * L'impostazione è quella già usata per il GIS, che funziona: le viste
+ * occupano una griglia scelta perché le celle siano il più grandi e il meno
+ * allungate possibile; a destra una colonna con la legenda in alto e il
+ * cartiglio in basso. Nessuna cornice attorno a ogni cosa — è quello che fa
+ * sembrare vecchia una tavola: bastano un filetto e dello spazio.
+ *
+ * 🔴 Ogni vista porta LA SUA scala, calcolata davvero. È la differenza fra un
+ * disegno tecnico e un'immagine, e due riquadri della stessa tavola quasi mai
+ * stanno alla stessa scala.
+ */
 export async function esportaTavola(modello, spazio, o) {
   const opz = opzioni(o)
   const doc = await nuovoDocumento(opz)
   const [LF, AF] = foglio(opz)
-  const vista = o.vista // [x0, y0, x1, y1] in coordinate del disegno
-  if (!vista) throw new Error('Serve un\'inquadratura da stampare.')
+  const viste = (o.viste && o.viste.length ? o.viste : [{ rett: o.vista, nome: '' }])
+    .filter((v) => v.rett)
+  if (!viste.length) throw new Error("Serve almeno un'inquadratura.")
 
-  const margine = opz.margine
-  const areaL = LF - margine * 2 - LEGENDA_MM
-  const areaA = AF - margine * 2 - 14 // spazio per il cartiglio in basso
-  const largo = Math.max(1e-9, vista[2] - vista[0])
-  const alto = Math.max(1e-9, vista[3] - vista[1])
+  const MARGINE = opz.margine
+  const RESPIRO = 5
+  const COLONNA = 62
+  const ALTEZZA_CARTIGLIO = 34
+
+  const utileL = LF - MARGINE * 2 - COLONNA - RESPIRO
+  const utileA = AF - MARGINE * 2
+  const g = grigliaMigliore(viste.length, utileL, utileA, RESPIRO)
 
   const mmPerUnita = spazio.carta ? 1 : modello.unita.mm || o.mmPerUnitaSupposto || 1
-  const scala = opz.scala || scalaNormalizzata(Math.max((largo * mmPerUnita) / areaL, (alto * mmPerUnita) / areaA))
-  const k = mmPerUnita / scala
-
-  // Il disegno si centra nel riquadro. La verticale si scrive una volta e in un
-  // modo solo: il bordo ALTO del riquadro corrisponde al lato alto
-  // dell'inquadratura, e da lì si scende. La versione precedente sommava e
-  // sottraeva gli stessi termini, e il disegno finiva fuori centro.
-  const offX = margine + (areaL - largo * k) / 2
-  const cima = margine + (areaA - alto * k) / 2
-  const vx = (x) => offX + (x - vista[0]) * k
-  const vy = (y) => cima + (vista[3] - y) * k
-
-  // Riquadro del disegno.
-  doc.setDrawColor('#000000')
-  doc.setLineWidth(0.3)
-  doc.rect(margine, margine, areaL, areaA)
-
-  // --- disegno, ritagliato al riquadro --------------------------------------
+  const simboli = new Map()
   const layerInVista = new Map()
+  const scale = []
   let disegnate = 0
-  for (const p of spazio.primitive) {
-    if (p.tipo === 'vista' || p.infinita) continue
-    if (opz.layerVisibili && !opz.layerVisibili.has(p.layer)) continue
-    const i = p.ingombro
-    if (i[2] < vista[0] || i[0] > vista[2] || i[3] < vista[1] || i[1] > vista[3]) continue
 
-    const colore = opz.monocromatico ? '#000000' : risolviInchiostro(p.colore, true)
+  for (let i = 0; i < viste.length; i++) {
+    const riga = Math.floor(i / g.colonne)
+    const col = i % g.colonne
+    const x0 = MARGINE + col * (g.l + RESPIRO)
+    const y0 = MARGINE + riga * (g.a + RESPIRO)
+    const r = viste[i].rett
+    const largo = Math.max(1e-9, r[2] - r[0])
+    const alto = Math.max(1e-9, r[3] - r[1])
+    const scala = opz.scala || scalaNormalizzata(
+      Math.max((largo * mmPerUnita) / g.l, (alto * mmPerUnita) / (g.a - 6))
+    )
+    const k = mmPerUnita / scala
+    const cx = x0 + (g.l - largo * k) / 2
+    const cy = y0 + (g.a - 6 - alto * k) / 2
+    const vx = (x) => cx + (x - r[0]) * k
+    const vy = (y) => cy + (r[3] - y) * k
+
+    doc.setDrawColor('#8a8a8a')
+    doc.setLineWidth(0.25)
+    doc.rect(x0, y0, g.l, g.a - 6)
+
+    disegnate += disegnaDentroVista(doc, {
+      spazio, r, vx, vy, k, opz, note: o.note || [],
+      simboli, layerInVista,
+    })
+
+    doc.setTextColor('#333333')
+    doc.setFontSize(7.5)
+    const etichetta = viste[i].nome
+      ? `${viste[i].nome} — 1:${scala}`
+      : `Vista ${i + 1} — 1:${scala}`
+    doc.text(etichetta, x0, y0 + g.a - 1.5)
+    scale.push(scala)
+  }
+
+  const xd = LF - MARGINE - COLONNA
+  const hLegenda = utileA - ALTEZZA_CARTIGLIO - RESPIRO
+  const legenda = disegnaLegenda(doc, {
+    x: xd, y: MARGINE, larghezza: COLONNA, altezza: hLegenda,
+    simboli, layer: [...layerInVista.keys()], modello,
+    mostraLayer: o.conLayer !== false,
+  })
+  cartiglio(doc, {
+    x: xd, y: MARGINE + hLegenda + RESPIRO, larghezza: COLONNA, altezza: ALTEZZA_CARTIGLIO,
+    titolo: o.titolo || 'Tavola',
+    nomeFile: modello.nomeFile, spazio: spazio.nome,
+    scale, unita: modello.unita, formato: opz.formato,
+  })
+
+  return {
+    blob: doc.output('blob'),
+    arrayBuffer: () => doc.output('arraybuffer'),
+    scala: scale[0], scale, viste: viste.length, disegnate, legenda,
+  }
+}
+
+/**
+ * La griglia migliore per n viste: fra due disposizioni di pari area si
+ * preferisce la cella meno allungata, perché una vista lunga e stretta non si
+ * legge. (Stesso criterio della tavola del GIS.)
+ */
+function grigliaMigliore(n, larghezza, altezza, respiro) {
+  let scelta = { righe: 1, colonne: n, punteggio: 0, l: larghezza, a: altezza }
+  for (let righe = 1; righe <= n; righe++) {
+    const colonne = Math.ceil(n / righe)
+    const l = (larghezza - respiro * (colonne - 1)) / colonne
+    const a = (altezza - respiro * (righe - 1)) / righe
+    if (l <= 20 || a <= 20) continue
+    const proporzione = Math.max(l / a, a / l)
+    const punteggio = (l * a) / proporzione
+    if (punteggio > scelta.punteggio) scelta = { righe, colonne, punteggio, l, a }
+  }
+  return scelta
+}
+
+/** Disegna una vista dentro il suo riquadro e raccoglie le voci di legenda. */
+function disegnaDentroVista(doc, d) {
+  let disegnate = 0
+  for (const p of d.spazio.primitive) {
+    if (p.tipo === 'vista' || p.infinita) continue
+    if (d.opz.layerVisibili && !d.opz.layerVisibili.has(p.layer)) continue
+    const i = p.ingombro
+    if (i[2] < d.r[0] || i[0] > d.r[2] || i[3] < d.r[1] || i[1] > d.r[3]) continue
+
+    const colore = d.opz.monocromatico ? '#000000' : risolviInchiostro(p.colore, true)
     if (p.tipo === 'testo') {
-      if (p.x < vista[0] || p.x > vista[2] || p.y < vista[1] || p.y > vista[3]) continue
-      layerInVista.set(p.layer, (layerInVista.get(p.layer) || 0) + 1)
-      const h = p.altezza * k
+      if (p.x < d.r[0] || p.x > d.r[2] || p.y < d.r[1] || p.y > d.r[3]) continue
+      d.layerInVista.set(p.layer, (d.layerInVista.get(p.layer) || 0) + 1)
+      const h = p.altezza * d.k
       if (h < 0.6) continue
       doc.setTextColor(colore)
       doc.setFontSize((h * 72) / 25.4)
-      doc.text(p.testo, vx(p.x), vy(p.y), { angle: (p.rotazione * 180) / Math.PI })
+      doc.text(p.testo, d.vx(p.x), d.vy(p.y), { angle: (p.rotazione * 180) / Math.PI })
       disegnate++
       continue
     }
     doc.setDrawColor(colore)
     doc.setLineWidth(Math.max(SPESSORE_MINIMO, p.spessore || 0))
-    for (const pezzo of ritaglia(p.punti, vista)) {
-      const salti = []
-      let px = vx(pezzo[0])
-      let py = vy(pezzo[1])
-      const ix = px
-      const iy = py
-      for (let i2 = 2; i2 < pezzo.length; i2 += 2) {
-        const x = vx(pezzo[i2])
-        const y = vy(pezzo[i2 + 1])
-        salti.push([x - px, y - py])
-        px = x
-        py = y
-      }
-      if (salti.length) {
-        doc.lines(salti, ix, iy, [1, 1], 'S', false)
-        disegnate++
-      }
+    for (const pezzo of ritaglia(p.punti, d.r)) {
+      if (tratta(doc, pezzo, d.vx, d.vy, false, false)) disegnate++
     }
-    layerInVista.set(p.layer, (layerInVista.get(p.layer) || 0) + 1)
+    d.layerInVista.set(p.layer, (d.layerInVista.get(p.layer) || 0) + 1)
   }
 
-  // --- annotazioni e simboli, solo quelli dentro l'inquadratura -------------
-  const simboli = new Map()
-  for (const n of o.note || []) {
-    // Si guarda l'INGOMBRO della nota, non il punto di ancoraggio: una nuvola
-    // disegnata partendo da fuori riquadro ha l'angolo fuori ma il corpo
-    // dentro, e lasciarla fuori dalla legenda sarebbe sbagliato.
+  for (const n of d.note) {
     const g = geometriaNota(n, n.altezza || 14)
     let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity
     for (const f of g.spezzate) {
@@ -458,137 +520,135 @@ export async function esportaTavola(modello, spazio, o) {
       miny = Math.min(miny, t.y); maxy = Math.max(maxy, t.y)
     }
     const dentro = isFinite(minx) &&
-      maxx >= vista[0] && minx <= vista[2] && maxy >= vista[1] && miny <= vista[3]
+      maxx >= d.r[0] && minx <= d.r[2] && maxy >= d.r[1] && miny <= d.r[3]
     if (!dentro) continue
-    if (n.tipo === 'simbolo') {
-      simboli.set(n.simbolo, (simboli.get(n.simbolo) || 0) + 1)
-    }
-    const { spezzate, testi } = g
-    doc.setDrawColor(n.colore)
+    if (n.tipo === 'simbolo') d.simboli.set(n.simbolo, (d.simboli.get(n.simbolo) || 0) + 1)
+
     doc.setTextColor(n.colore)
     doc.setLineWidth(0.4)
-    for (const punti of spezzate) {
-      const salti = []
-      let px = vx(punti[0])
-      let py = vy(punti[1])
-      const ix = px
-      const iy = py
-      for (let i2 = 2; i2 < punti.length; i2 += 2) {
-        const x = vx(punti[i2])
-        const y = vy(punti[i2 + 1])
-        salti.push([x - px, y - py])
-        px = x
-        py = y
-      }
-      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+    for (const punti of g.spezzate) {
+      const tinta = punti.chiaro ? '#ffffff' : n.colore
+      doc.setDrawColor(tinta)
+      doc.setFillColor(tinta)
+      tratta(doc, punti, d.vx, d.vy, punti.pieno, punti.pieno)
     }
-    for (const t of testi) {
-      doc.setFontSize((Math.max(2, t.altezza * k) * 72) / 25.4)
-      doc.text(t.testo, vx(t.x), vy(t.y))
+    for (const t of g.testi) {
+      doc.setFontSize((Math.max(2, t.altezza * d.k) * 72) / 25.4)
+      doc.text(t.testo, d.vx(t.x), d.vy(t.y))
     }
   }
-
-  const legenda = disegnaLegenda(doc, {
-    x: margine + areaL + 6,
-    y: margine,
-    larghezza: LEGENDA_MM - 6,
-    altezza: areaA,
-    simboli,
-    layer: [...layerInVista.keys()],
-    modello,
-    mostraLayer: o.conLayer !== false,
-  })
-
-  cartiglio(doc, {
-    LF, AF, margine,
-    titolo: o.titolo || 'Tavola',
-    nomeFile: modello.nomeFile,
-    spazio: spazio.nome,
-    scala,
-    unita: modello.unita,
-    formato: opz.formato,
-  })
-
-  return { blob: doc.output('blob'), arrayBuffer: () => doc.output('arraybuffer'), scala, disegnate, legenda }
+  return disegnate
 }
 
-function disegnaLegenda(doc, d) {
-  doc.setDrawColor('#000000')
-  doc.setLineWidth(0.3)
-  doc.rect(d.x, d.y, d.larghezza, d.altezza)
-  doc.setTextColor('#000000')
-  doc.setFontSize(9)
-  doc.text('LEGENDA', d.x + 3, d.y + 6)
-  doc.setLineWidth(0.2)
-  doc.line(d.x + 3, d.y + 7.5, d.x + d.larghezza - 3, d.y + 7.5)
+/** Una spezzata sul foglio. Torna false se non c'era niente da disegnare. */
+function tratta(doc, punti, vx, vy, pieno, chiudi) {
+  if (!punti || punti.length < 4) return false
+  const salti = []
+  let px = vx(punti[0])
+  let py = vy(punti[1])
+  const ix = px
+  const iy = py
+  for (let i = 2; i < punti.length; i += 2) {
+    const x = vx(punti[i])
+    const y = vy(punti[i + 1])
+    salti.push([x - px, y - py])
+    px = x
+    py = y
+  }
+  if (!salti.length) return false
+  doc.lines(salti, ix, iy, [1, 1], pieno ? 'F' : 'S', !!chiudi)
+  return true
+}
 
-  let y = d.y + 13
-  let voci = 0
+/**
+ * La legenda: niente cornice e niente fascia in testa, solo un filetto e dello
+ * spazio. Elenca il VISIBILE, non il disponibile — una legenda che riporta
+ * tutti i layer del file anche quando in tavola non si vedono costringe chi
+ * legge a cercare segni che lì non ci sono.
+ */
+function disegnaLegenda(doc, d) {
+  doc.setTextColor('#141414')
   doc.setFontSize(7)
+  doc.text('LEGENDA', d.x, d.y + 4)
+  doc.setDrawColor('#282828')
+  doc.setLineWidth(0.35)
+  doc.line(d.x, d.y + 6.4, d.x + d.larghezza, d.y + 6.4)
+
+  let y = d.y + 12.5
+  const passo = 6.4
+  let voci = 0
 
   for (const [id, quante] of [...d.simboli].sort((a, b) => b[1] - a[1])) {
     const s = PER_ID[id]
-    if (!s || y > d.y + d.altezza - 8) continue
+    if (!s || y > d.y + d.altezza - 6) continue
     const colore = CATEGORIE[s.cat].colore
-    doc.setDrawColor(colore)
-    doc.setLineWidth(0.25)
-    // Il simbolo si ridisegna dalle sue forme, non da un'immagine: in legenda
-    // dev'essere lo stesso segno che sta in tavola.
+    // Il simbolo in legenda si ridisegna dalle SUE forme: dev'essere lo stesso
+    // segno che sta in tavola, non una sua imitazione.
     for (const f of formeSimbolo(id)) {
-      const salti = []
-      let px = d.x + 3 + f[0] * 6
-      let py = y + 5 - f[1] * 6
-      const ix = px
-      const iy = py
-      for (let i = 2; i < f.length; i += 2) {
-        const x = d.x + 3 + f[i] * 6
-        const yy = y + 5 - f[i + 1] * 6
-        salti.push([x - px, yy - py])
-        px = x
-        py = yy
-      }
-      if (salti.length) doc.lines(salti, ix, iy, [1, 1], 'S', false)
+      const tinta = f.chiaro ? '#ffffff' : colore
+      doc.setDrawColor(tinta)
+      doc.setFillColor(tinta)
+      doc.setLineWidth(0.2)
+      tratta(doc, f.punti, (u) => d.x + u * 5.4, (v) => y + 1.6 - v * 5.4, f.pieno, f.pieno)
     }
-    doc.setTextColor('#000000')
-    doc.text(`${s.nome}${quante > 1 ? `  ×${quante}` : ''}`, d.x + 11, y + 4)
-    y += 8
+    doc.setTextColor('#232323')
+    doc.setFontSize(7)
+    doc.text(s.nome, d.x + 8, y, { maxWidth: d.larghezza - 16 })
+    doc.setTextColor('#8a8a8a')
+    doc.setFontSize(6.4)
+    doc.text(String(quante), d.x + d.larghezza, y, { align: 'right' })
+    y += passo
     voci++
   }
 
   if (d.mostraLayer && d.layer.length) {
-    y += 2
-    doc.setTextColor('#000000')
-    doc.setFontSize(8)
-    doc.text('Layer del disegno', d.x + 3, y + 3)
-    y += 6
+    y += 3
+    doc.setTextColor('#141414')
     doc.setFontSize(7)
+    doc.text('LAYER IN TAVOLA', d.x, y)
+    doc.setDrawColor('#282828')
+    doc.setLineWidth(0.25)
+    doc.line(d.x, y + 1.8, d.x + d.larghezza, y + 1.8)
+    y += 7
+    doc.setFontSize(6.6)
     const perNome = new Map(d.modello.layer.map((l) => [l.nome, l]))
-    for (const nome of d.layer.sort()) {
-      if (y > d.y + d.altezza - 5) break
-      const colore = risolviInchiostro(coloreLayer(perNome.get(nome)), true)
-      doc.setFillColor(colore)
-      doc.rect(d.x + 3, y - 2, 4, 2.4, 'F')
-      doc.setTextColor('#000000')
-      doc.text(nome.length > 26 ? nome.slice(0, 25) + '…' : nome, d.x + 9, y)
-      y += 5
+    for (const nome of [...d.layer].sort()) {
+      if (y > d.y + d.altezza - 3) break
+      doc.setFillColor(risolviInchiostro(coloreLayer(perNome.get(nome)), true))
+      doc.rect(d.x, y - 1.8, 5, 2.2, 'F')
+      doc.setTextColor('#333333')
+      doc.text(nome.length > 28 ? nome.slice(0, 27) + '…' : nome, d.x + 7, y)
+      y += 4.6
       voci++
     }
   }
-
   return voci
 }
 
+/** Il cartiglio: i dati senza i quali una tavola stampata non si usa. */
 function cartiglio(doc, d) {
-  const y = d.AF - d.margine - 4
-  doc.setDrawColor('#000000')
-  doc.setLineWidth(0.3)
-  doc.line(d.margine, y - 6, d.LF - d.margine, y - 6)
-  doc.setTextColor('#000000')
+  doc.setDrawColor('#282828')
+  doc.setLineWidth(0.35)
+  doc.line(d.x, d.y, d.x + d.larghezza, d.y)
+
+  doc.setTextColor('#141414')
   doc.setFontSize(10)
-  doc.text(d.titolo, d.margine, y - 0.5)
-  doc.setFontSize(7)
+  doc.text(d.titolo, d.x, d.y + 6, { maxWidth: d.larghezza })
+
+  doc.setFontSize(6.6)
+  doc.setTextColor('#4a4a4a')
   const unita = d.unita.dichiarate ? d.unita.nome : 'unità non dichiarate nel file'
-  doc.text(`${d.nomeFile} — ${d.spazio}`, d.margine, y + 4)
-  doc.text(`scala 1:${d.scala} · ${d.formato} · disegno in ${unita}`, d.LF / 2, y + 4, { align: 'center' })
-  doc.text(new Date().toLocaleDateString('it-IT'), d.LF - d.margine, y + 4, { align: 'right' })
+  const scale = [...new Set(d.scale)].map((s) => `1:${s}`).join(' · ')
+  const righe = [
+    d.nomeFile,
+    `spazio: ${d.spazio}`,
+    `scala ${scale}`,
+    `disegno in ${unita}`,
+    `${d.formato} · ${new Date().toLocaleDateString('it-IT')}`,
+  ]
+  let y = d.y + 12
+  for (const r of righe) {
+    doc.text(r, d.x, y, { maxWidth: d.larghezza })
+    y += 4
+  }
 }

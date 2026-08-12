@@ -91,8 +91,8 @@ console.log(`\nVerifica su ${elenco.length} file di prova\n${'─'.repeat(70)}`)
     const forme = formeSimbolo(s.id)
     if (!forme.length) vuoti++
     for (const f of forme) {
-      if (f.length < 4) vuoti++
-      for (const v of f) {
+      if (f.punti.length < 4) vuoti++
+      for (const v of f.punti) {
         punti++
         if (!Number.isFinite(v)) nan++
         // 🔴 Le forme stanno in coordinate 0..1: una fuori da lì sborda dal

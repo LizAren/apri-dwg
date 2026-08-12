@@ -121,7 +121,9 @@ const strumenti = new Strumenti({
       const esito = await esportaTavola(modello, spazioAttivo, {
         ...opzioniStampa(),
         piede: false,
-        vista: [x0, y0, x1, y1],
+        // Se non è stata aggiunta nessuna vista si stampa quella che si vede:
+        // è il caso più frequente e non deve chiedere un passaggio in più.
+        viste: scelte.viste?.length ? scelte.viste : [{ rett: [x0, y0, x1, y1], nome: '' }],
         titolo: scelte.titolo,
         conLayer: scelte.conLayer,
       })

@@ -165,15 +165,17 @@ export async function esportaPng(spazio, opzioni = {}) {
   // Le annotazioni, con la stessa geometria dello schermo e del PDF.
   for (const n of opzioni.note || []) {
     const { spezzate, testi: tn } = geometriaNota(n, (n.scala || 1) * 14)
-    ctx.strokeStyle = n.colore
-    ctx.fillStyle = n.colore
     ctx.lineWidth = Math.max(2, larghezza / 900)
     for (const punti of spezzate) {
       if (punti.length < 4) continue
+      const tinta = punti.chiaro ? '#ffffff' : n.colore
+      ctx.strokeStyle = tinta
+      ctx.fillStyle = tinta
       ctx.beginPath()
       ctx.moveTo(ax(punti[0]), ay(punti[1]))
       for (let k = 2; k < punti.length; k += 2) ctx.lineTo(ax(punti[k]), ay(punti[k + 1]))
-      ctx.stroke()
+      if (punti.pieno) ctx.fill()
+      else ctx.stroke()
     }
     for (const t of tn) {
       const h = Math.max(10, t.altezza * zoom)

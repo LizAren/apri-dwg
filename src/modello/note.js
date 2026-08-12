@@ -40,12 +40,16 @@ export function geometriaNota(nota, altezzaTesto) {
     const h = nota.altezza || altezzaTesto
     const [x, y] = nota.punti
     const spezzate = formeSimbolo(nota.simbolo).map((f) => {
-      const p = new Array(f.length)
-      for (let i = 0; i < f.length; i += 2) {
-        p[i] = x + f[i] * h
-        p[i + 1] = y + f[i + 1] * h
+      const q = new Array(f.punti.length)
+      for (let i = 0; i < f.punti.length; i += 2) {
+        q[i] = x + f.punti[i] * h
+        q[i + 1] = y + f.punti[i + 1] * h
       }
-      return p
+      // Le proprietà viaggiano con la spezzata: chi disegna non deve sapere
+      // che cos'è un simbolo, solo se questa forma va riempita o schiarita.
+      q.pieno = f.pieno
+      q.chiaro = f.chiaro
+      return q
     })
     return { spezzate, testi: [] }
   }
