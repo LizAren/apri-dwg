@@ -16,7 +16,7 @@ Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 npm install
 npm run dev        # sviluppo, apre su localhost
 npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
-npm run verifica   # 66 controlli misurati sui file di prova
+npm run verifica   # 85 controlli misurati sui file di prova
 node strumenti/schermate.mjs      # apre l'app in un browser vero e la fotografa
 node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
@@ -29,7 +29,7 @@ node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 | `src/lettura/` | riconosce il formato e legge: `dwg.js` (LibreDWG in WebAssembly), `dxf.js` (testo) |
 | `src/modello/` | da entità del file a **due sole primitive**: spezzate e testi. Colori ACI, unità, geometria |
 | `src/vista/` | la tela: Canvas 2D, spostamento, ingrandimento, layer |
-| `src/esporta/` | PDF vettoriale in millimetri, con la scala dichiarata |
+| `src/esporta/` | PDF vettoriale in millimetri con la scala dichiarata, DXF e PNG |
 | `src/interfaccia/` | le funzioni bloccate e la richiesta di accesso |
 | `src/vista/aggancio.js` | indice spaziale, selezione e aggancio (estremo, centro, intersezione, medio) |
 | `api/` | PHP: accesso e account. 🔴 `config.php` non è qui e non si carica mai |
@@ -114,3 +114,27 @@ WebAssembly lo serve intero e non basta chiederglielo in `.htaccess`: la copia
 compressa la prepara `strumenti/comprimi.mjs` alla pubblicazione, e `.htaccess`
 la serve al posto dell'originale. Senza, sono 9,5 MB e 14 secondi per ogni
 apertura. Il numero misurato in locale non era quello che riceveva la gente.
+
+## Le funzioni, e cosa sono davvero
+
+Sei esistono e si accendono da un account; tre no, e non è una dimenticanza.
+
+| Funzione | Stato |
+|---|---|
+| Misura con aggancio | ✅ estremo, centro, intersezione, punto medio, sulla linea |
+| Proprietà al clic | ✅ tipo, layer, colore, spessore, lunghezza, area, raggio, handle |
+| Ricerca testo | ✅ trova e porta in vista |
+| Elenco blocchi | ✅ conteggio degli inserimenti (⚠️ non è un computo metrico) |
+| Tutte le tavole in un PDF | ✅ una pagina per spazio, ognuna con la sua scala |
+| Export DXF e PNG | ✅ 🔴 esporta la GEOMETRIA, non il file: blocchi espansi, quote diventate linee |
+| Annotazioni | ❌ da fare |
+| Salvataggio e condivisione | ❌ serve spazio sul server: quota, scadenza, dati di clienti |
+| Confronto fra versioni | ❌ da fare |
+
+🔴 **L'export DXF si verifica rileggendolo con il nostro stesso lettore**: è
+l'unico modo per sapere se quello che esce è un DXF vero. Scarto misurato
+sull'estensione: **0,000%**.
+
+🔴 **L'amministratore ha tutte le funzioni per definizione**, non riga per riga:
+senza quella regola, aggiungendone una nuova sarebbe l'unico a non averla e non
+potrebbe nemmeno accendersela.

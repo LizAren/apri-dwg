@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url'
 import { caricaConPercorso, leggiDwg } from '../src/lettura/dwg.js'
 import { leggiDxf } from '../src/lettura/dxf.js'
 import { normalizza, calcolaEstensione } from '../src/modello/normalizza.js'
-import { esportaPdf, eNormalizzata } from '../src/esporta/pdf.js'
+import { esportaPdf, esportaPdfMultiplo, eNormalizzata } from '../src/esporta/pdf.js'
+import { esportaDxf } from '../src/esporta/dxf.js'
 
 const QUI = dirname(fileURLToPath(import.meta.url))
 const RADICE = join(QUI, '..')
@@ -182,6 +183,47 @@ for (const nome of elenco) {
     writeFileSync(join(USCITA, nome.replace(/\.\w+$/, '.pdf')), buf)
   } catch (e) {
     controlla(`${nome}: PDF valido`, false, e.message)
+  }
+
+  // 🔴 Export DXF: si verifica RILEGGENDOLO col nostro stesso lettore.
+  // È l'unico modo per sapere se quello che esce è un DXF vero e se la
+  // geometria sopravvive al viaggio: un file che «sembra» giusto e che nessun
+  // CAD riapre sarebbe indistinguibile, da qui dentro, da uno buono.
+  try {
+    const dxf = esportaDxf(modello, modelloSpazio, null)
+    controlla(`${nome}: DXF prodotto`, dxf.entita > 0, `${dxf.entita} entità, ${(dxf.testo.length / 1024).toFixed(0)} kB`)
+    const rifatto = normalizza(await leggiDxf(dxf.testo, 'riletto.dxf'))
+    const sp = rifatto.spazi[0]
+    const e1 = modelloSpazio.estensione
+    const e2 = sp.estensione
+    const misura = Math.max(e1[2] - e1[0], e1[3] - e1[1])
+    const scarto = Math.max(...e2.map((v, i) => Math.abs(v - e1[i]))) / misura
+    controlla(
+      `${nome}: il DXF esportato si rilegge uguale`,
+      scarto < 0.02,
+      `scarto ${(scarto * 100).toFixed(3)}% sull'estensione, ${sp.primitive.length} primitive rilette`
+    )
+    controlla(
+      `${nome}: unità conservate nel DXF`,
+      rifatto.unita.codice === modello.unita.codice,
+      `${rifatto.unita.nome}`
+    )
+  } catch (e) {
+    controlla(`${nome}: DXF prodotto`, false, e.message)
+  }
+
+  // Tavole multiple: una pagina per spazio, nello stesso PDF.
+  if (modello.spazi.length > 1) {
+    try {
+      const molte = await esportaPdfMultiplo(modello, modello.spazi, { formato: 'A3' })
+      controlla(
+        `${nome}: tutte le tavole in un PDF solo`,
+        molte.pagine.length >= 1,
+        `${molte.pagine.length} pagine: ${molte.pagine.map((p) => `${p.nome} 1:${p.scala}`).join(', ')}`
+      )
+    } catch (e) {
+      controlla(`${nome}: tutte le tavole in un PDF solo`, false, e.message)
+    }
   }
 
   const layout = modello.spazi.filter((s) => s.carta)

@@ -23,7 +23,7 @@ export class Strumenti {
   /**
    * @param {object} opzioni  tela, contenitori del DOM, formattatore di misure
    */
-  constructor({ tela, elenco, esito, cambiato, formato, formatoArea, visibile }) {
+  constructor({ tela, elenco, esito, cambiato, formato, formatoArea, visibile, esporta }) {
     this.tela = tela
     this.elenco = elenco
     this.esito = esito
@@ -31,6 +31,8 @@ export class Strumenti {
     this.formato = formato
     this.formatoArea = formatoArea
     this.visibile = visibile
+    this.esporta = esporta || {}
+    this.modello = null
 
     this.attivo = null
     this.indice = null
@@ -44,6 +46,11 @@ export class Strumenti {
 
     this.tela.sovrapposizione = (ctx) => this._disegnaSopra(ctx)
     this._collega()
+  }
+
+  /** Il modello serve a chi mostra dati che non stanno nella geometria. */
+  perModello(modello) {
+    this.modello = modello
   }
 
   /** Il disegno è cambiato: l'indice va rifatto, e le misure non valgono più. */
@@ -344,6 +351,78 @@ export class Strumenti {
       return
     }
 
+    if (this.attivo === 'blocchi') {
+      e.hidden = false
+      const conteggi = Object.entries(this.modello?.rapporto?.blocchi || {})
+        .sort((a, b) => b[1] - a[1])
+      if (!conteggi.length) {
+        e.innerHTML = '<p class="nota">Questo disegno non contiene blocchi inseriti.</p>'
+        return
+      }
+      const totale = conteggi.reduce((n, [, q]) => n + q, 0)
+      e.innerHTML =
+        `<p class="nota">${conteggi.length} blocchi diversi, ${totale} inserimenti in tutto. ` +
+        `⚠️ È un conteggio degli inserimenti, non un computo metrico: dice quante ` +
+        `volte compare un blocco, non cosa contiene.</p>` +
+        '<div class="cerca-esiti">' +
+        conteggi
+          .map(
+            ([n, q]) =>
+              `<div class="esito-riga" role="listitem"><span class="esito-testo">${sicuro(n)}</span>` +
+              `<span class="esito-layer">${q}</span></div>`
+          )
+          .join('') +
+        '</div>'
+      return
+    }
+
+    if (this.attivo === 'tavole') {
+      e.hidden = false
+      const spazi = this.modello?.spazi || []
+      e.innerHTML =
+        `<p class="nota">Una pagina per spazio, ognuna con la sua scala: due tavole ` +
+        `dello stesso file quasi mai stanno alla stessa.</p>` +
+        '<div class="cerca-esiti">' +
+        spazi
+          .map(
+            (sp, i) =>
+              `<label class="esito-riga"><input type="checkbox" data-i="${i}" checked>` +
+              `<span class="esito-testo">${sicuro(sp.nome)}</span>` +
+              `<span class="esito-layer">${sp.primitive.length}</span></label>`
+          )
+          .join('') +
+        '</div>' +
+        '<button type="button" class="comando primario" id="tavole-fai">Genera il PDF</button>'
+      e.querySelector('#tavole-fai').addEventListener('click', async (ev) => {
+        const scelti = [...e.querySelectorAll('input:checked')].map((c) => spazi[+c.dataset.i])
+        ev.target.disabled = true
+        ev.target.textContent = 'Genero…'
+        try {
+          await this.esporta.pdfMultiplo?.(scelti)
+        } finally {
+          ev.target.disabled = false
+          ev.target.textContent = 'Genera il PDF'
+        }
+      })
+      return
+    }
+
+    if (this.attivo === 'dxf') {
+      e.hidden = false
+      e.innerHTML =
+        `<p class="nota">🔴 È un'esportazione della <strong>geometria disegnata</strong>, ` +
+        `non una copia del file: i blocchi sono già espansi, le quote sono diventate ` +
+        `linee e testi, i tratteggi sono solo il contorno. Chi lo riapre trova lo ` +
+        `stesso disegno, ma piatto.</p>` +
+        '<div class="recapiti">' +
+        '<button type="button" class="comando" id="esp-dxf">Scarica DXF</button>' +
+        '<button type="button" class="comando" id="esp-png">Scarica PNG</button>' +
+        '</div>'
+      e.querySelector('#esp-dxf').addEventListener('click', () => this.esporta.dxf?.())
+      e.querySelector('#esp-png').addEventListener('click', () => this.esporta.png?.())
+      return
+    }
+
     if (this.attivo === 'cerca') {
       e.hidden = false
       e.innerHTML =
@@ -426,4 +505,28 @@ const ELENCO = [
         '<path d="M7.8 9h5.4M7.8 12h3.4"/>'
     ),
   },
+  {
+    id: 'blocchi',
+    nome: 'Blocchi',
+    icona: I(
+      '<path d="M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7z"/>' +
+        '<path d="M13.5 13.5h7v7h-7z" stroke-dasharray="2.4 2.2"/>'
+    ),
+  },
+  {
+    id: 'tavole',
+    nome: 'Tutte le tavole',
+    icona: I('<path d="M3.5 6.5v14h11"/><path d="M8 3.5h8.5l4 4v13H8z"/><path d="M16.5 3.5v4h4"/>'),
+  },
+  {
+    id: 'dxf',
+    nome: 'Esporta',
+    icona: I(
+      '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>' +
+        '<path d="M12 10.5v6M9.4 14l2.6 2.6 2.6-2.6"/>'
+    ),
+  },
 ]
+
+const sicuro = (t) =>
+  String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch])

@@ -118,6 +118,7 @@ function creaRapporto(fonte) {
     nonDisegnati: {},
     xref: [],
     blocchiMancanti: new Set(),
+    blocchi: {},
     fontShx: new Set(),
     troncature: [],
     avvisi: fonte.avvisi || [],
@@ -353,6 +354,14 @@ function disegnaEntita(ent, ctx, m, coloreEreditato) {
 
     case 'INSERT': {
       const nome = ent.name
+      // Conteggio dei blocchi: si prende QUI, dove il blocco ha ancora un nome.
+      // Dopo l'espansione restano solo spezzate e il nome è perso per sempre —
+      // ed è l'unico dato da cui si ricava un computo grezzo.
+      if (nome) {
+        ctx.rapporto.blocchi[nome] =
+          (ctx.rapporto.blocchi[nome] || 0) +
+          Math.max(1, ent.rowCount || 1) * Math.max(1, ent.columnCount || 1)
+      }
       const px = ent.insertionPoint || ent.position
       if (!nome || !px) break
       const righe = Math.max(1, ent.rowCount || 1)

@@ -11,6 +11,14 @@
 //  entrare scrive, e la richiesta parte dalle funzioni col lucchetto.
 // ============================================================================
 
+/**
+ * Le funzioni che si possono assegnare a un account: quelle che ESISTONO
+ * davvero. Sta scritto qui una volta sola — e lo stesso elenco è ripetuto in
+ * `api/bootstrap.php`, che è l'unico posto dove conta davvero, perché il
+ * server scarta quello che non riconosce.
+ */
+export const ASSEGNABILI = ['misura', 'proprieta', 'cerca', 'blocchi', 'tavole', 'dxf']
+
 const BASE = './api'
 const CHIAVE_TOKEN = 'dwg-token'
 
@@ -235,7 +243,7 @@ export class Accesso {
 
     const funzioni = document.createElement('div')
     funzioni.className = 'conto-funzioni'
-    for (const f of ['misura', 'proprieta', 'cerca']) {
+    for (const f of ASSEGNABILI) {
       const et = document.createElement('label')
       const casella = document.createElement('input')
       casella.type = 'checkbox'
@@ -243,7 +251,7 @@ export class Accesso {
       casella.disabled = u.ruolo === 'admin'
       casella.addEventListener('change', async () => {
         const scelte = [...funzioni.querySelectorAll('input')]
-          .map((c, i) => (c.checked ? ['misura', 'proprieta', 'cerca'][i] : null))
+          .map((c, i) => (c.checked ? ASSEGNABILI[i] : null))
           .filter(Boolean)
         await this._azione('funzioni', { id: u.id, funzioni: scelte })
       })
@@ -310,7 +318,9 @@ export class Accesso {
     try {
       const r = await chiama('admin.php?action=crea', {
         method: 'POST',
-        body: JSON.stringify({ nome_utente: nome, funzioni: ['misura', 'proprieta', 'cerca'] }),
+        // Un account nuovo nasce con tutto acceso: togliere una casella è più
+        // rapido che spuntarne sei, e chi crea l'account sa già a chi lo dà.
+        body: JSON.stringify({ nome_utente: nome, funzioni: ASSEGNABILI }),
       })
       campo.value = ''
       this._mostraPassword(r.nome, r.password)

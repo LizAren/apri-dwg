@@ -23,7 +23,7 @@ import { Tela } from './vista/tela.js'
 import { montaBloccate } from './interfaccia/blocco.js'
 import { Strumenti } from './interfaccia/strumenti.js'
 import { Accesso } from './interfaccia/accesso.js'
-import { esportaPdf, SCALE } from './esporta/pdf.js'
+import { esportaPdf, esportaPdfMultiplo, SCALE } from './esporta/pdf.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -95,7 +95,50 @@ const strumenti = new Strumenti({
   formato: formatoLunghezza,
   formatoArea,
   visibile: (layer) => layerVisibili.has(layer),
+  esporta: {
+    async pdfMultiplo(spazi) {
+      try {
+        const esito = await esportaPdfMultiplo(modello, spazi, opzioniStampa())
+        scarica(esito.blob, base(modello) + `-${esito.pagine.length}-tavole.pdf`)
+        mostraErrore(esito.avvisi.length ? esito.avvisi.join(' ') : null)
+      } catch (e) {
+        mostraErrore(e.message)
+      }
+    },
+    async dxf() {
+      const { esportaDxf } = await import('./esporta/dxf.js')
+      const esito = esportaDxf(modello, spazioAttivo, layerVisibili)
+      scarica(new Blob([esito.testo], { type: 'application/dxf' }),
+        base(modello) + `-${spazioAttivo.nome}.dxf`)
+    },
+    async png() {
+      const { esportaPng } = await import('./esporta/dxf.js')
+      const blob = await esportaPng(spazioAttivo, {
+        larghezza: 3000,
+        fondoChiaro: true,
+        layerVisibili,
+      })
+      scarica(blob, base(modello) + `-${spazioAttivo.nome}.png`)
+    },
+  },
 })
+
+const base = (m) => m.nomeFile.replace(/\.\w+$/, '')
+
+/** Le impostazioni della finestra di stampa, riusate dalle tavole multiple. */
+function opzioniStampa() {
+  return {
+    formato: $('pdf-formato').value,
+    orientamento: $('pdf-orientamento').value,
+    scala: $('pdf-scala').value ? Number($('pdf-scala').value) : null,
+    monocromatico: $('pdf-mono').checked,
+    piede: $('pdf-piede').checked,
+    layerVisibili,
+    mmPerUnitaSupposto: modello?.unita?.dichiarate
+      ? null
+      : UNITA[Number($('pdf-unita').value)]?.mm,
+  }
+}
 
 // ---------------------------------------------------------------------------
 //  Apertura
@@ -148,6 +191,7 @@ async function apri(file) {
     disegnaSpazi()
     disegnaLayer()
     disegnaRapporto()
+    strumenti.perModello(modello)
     aggiornaPermessi()
     $('benvenuto').hidden = true
     for (const b of ['btn-tutto', 'btn-fondo', 'btn-pdf']) $(b).disabled = false

@@ -59,9 +59,14 @@ const SPESSORE_MINIMO = 0.13
 /**
  * @returns {{blob: Blob, scala: number, avvisi: string[]}}
  */
-export async function esportaPdf(modello, spazio, opzioni) {
-  const { jsPDF } = await import('jspdf')
-  const o = {
+/** Misure del foglio scelto, in millimetri. */
+function foglio(o) {
+  const [corto, lungo] = FORMATI[o.formato] || FORMATI.A4
+  return o.orientamento === 'orizzontale' ? [lungo, corto] : [corto, lungo]
+}
+
+function opzioni(o) {
+  return {
     formato: 'A4',
     orientamento: 'orizzontale',
     margine: 10,
@@ -69,13 +74,32 @@ export async function esportaPdf(modello, spazio, opzioni) {
     monocromatico: false,
     piede: true,
     layerVisibili: null,
-    ...opzioni,
+    ...o,
   }
-  const avvisi = []
+}
 
-  const [corto, lungo] = FORMATI[o.formato] || FORMATI.A4
-  const larghezzaFoglio = o.orientamento === 'orizzontale' ? lungo : corto
-  const altezzaFoglio = o.orientamento === 'orizzontale' ? corto : lungo
+async function nuovoDocumento(o) {
+  const { jsPDF } = await import('jspdf')
+  const [larghezza, altezza] = foglio(o)
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [larghezza, altezza],
+    orientation: o.orientamento === 'orizzontale' ? 'landscape' : 'portrait',
+    compress: true,
+  })
+  doc.setLineJoin('round')
+  doc.setLineCap('round')
+  return doc
+}
+
+/**
+ * Disegna UNO spazio sulla pagina corrente. Sta a parte perché le tavole
+ * multiple sono lo stesso disegno ripetuto: se questa logica fosse dentro
+ * `esportaPdf` bisognerebbe copiarla, e due copie divergono sempre.
+ */
+function disegnaSpazio(doc, modello, spazio, o) {
+  const avvisi = []
+  const [larghezzaFoglio, altezzaFoglio] = foglio(o)
 
   // Lo spazio carta è già in millimetri di foglio: là una scala diversa da 1:1
   // rimpicciolirebbe una tavola che è già impaginata.
@@ -86,10 +110,10 @@ export async function esportaPdf(modello, spazio, opzioni) {
       'se le unità scelte sono quelle giuste.'
     )
   }
-  const fattoreUnita = mmPerUnita || opzioni.mmPerUnitaSupposto || 1
+  const fattoreUnita = mmPerUnita || o.mmPerUnitaSupposto || 1
 
   const visibili = disegnabili(spazio, o.layerVisibili)
-  if (!visibili.length) throw new Error('Non c\'è niente da stampare: tutti i layer sono nascosti.')
+  if (!visibili.length) throw new Error("Non c'è niente da stampare: tutti i layer sono nascosti.")
 
   const est = estensione(visibili)
   const utileL = larghezzaFoglio - o.margine * 2
@@ -115,15 +139,6 @@ export async function esportaPdf(modello, spazio, opzioni) {
   if ((est[2] - est[0]) * k > utileL + 0.5 || (est[3] - est[1]) * k > utileA + 0.5) {
     avvisi.push(`Alla scala 1:${scala} il disegno non entra nel foglio: una parte resta fuori.`)
   }
-
-  const doc = new jsPDF({
-    unit: 'mm',
-    format: [larghezzaFoglio, altezzaFoglio],
-    orientation: o.orientamento === 'orizzontale' ? 'landscape' : 'portrait',
-    compress: true,
-  })
-  doc.setLineJoin('round')
-  doc.setLineCap('round')
 
   let coloreCorrente = null
   let spessoreCorrente = null
@@ -201,11 +216,56 @@ export async function esportaPdf(modello, spazio, opzioni) {
     })
   }
 
+  return { scala, disegnate, avvisi }
+}
+
+/**
+ * @returns {{blob: Blob, scala: number, avvisi: string[]}}
+ */
+export async function esportaPdf(modello, spazio, o) {
+  const opz = opzioni(o)
+  const doc = await nuovoDocumento(opz)
+  const esito = disegnaSpazio(doc, modello, spazio, opz)
   return {
     blob: doc.output('blob'),
     arrayBuffer: () => doc.output('arraybuffer'),
-    scala,
-    disegnate,
+    ...esito,
+  }
+}
+
+/**
+ * Tutte le tavole in un PDF solo — una pagina per spazio.
+ *
+ * È la richiesta più frequente di chi «converte in PDF»: un disegno ha di
+ * norma più layout e mandarne uno per volta significa rifare la stessa cosa
+ * cinque volte. Ogni pagina tiene la SUA scala, perché due tavole dello stesso
+ * file quasi mai stanno alla stessa.
+ */
+export async function esportaPdfMultiplo(modello, spazi, o) {
+  const opz = opzioni(o)
+  const doc = await nuovoDocumento(opz)
+  const pagine = []
+  const avvisi = []
+  let primo = true
+  for (const spazio of spazi) {
+    if (!primo) doc.addPage()
+    try {
+      const esito = disegnaSpazio(doc, modello, spazio, opz)
+      pagine.push({ nome: spazio.nome, scala: esito.scala, disegnate: esito.disegnate })
+      avvisi.push(...esito.avvisi)
+      primo = false
+    } catch (e) {
+      // Uno spazio vuoto non deve far fallire l'intero fascicolo: si salta e
+      // si dice quale.
+      avvisi.push(`«${spazio.nome}» saltata: ${e.message}`)
+      if (!primo) doc.deletePage(doc.getNumberOfPages())
+    }
+  }
+  if (!pagine.length) throw new Error('Nessuna tavola da stampare.')
+  return {
+    blob: doc.output('blob'),
+    arrayBuffer: () => doc.output('arraybuffer'),
+    pagine,
     avvisi,
   }
 }
