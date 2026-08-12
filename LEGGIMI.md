@@ -117,7 +117,7 @@ apertura. Il numero misurato in locale non era quello che riceveva la gente.
 
 ## Le funzioni, e cosa sono davvero
 
-Sei esistono e si accendono da un account; tre no, e non è una dimenticanza.
+Tutte e nove esistono e si accendono da un account.
 
 | Funzione | Stato |
 |---|---|
