@@ -687,46 +687,116 @@ const ALTEZZE = ['chiuso', 'mezzo', 'pieno']
 const maniglia = $('maniglia-foglio')
 const pannello = $('pannello')
 
+/** Quanto è alto il foglio, in pixel, in ciascuna delle tre posizioni. */
+const mete = () => ({
+  chiuso: 136,
+  mezzo: innerHeight * 0.46,
+  pieno: innerHeight * 0.82,
+})
+
+const dovE = () =>
+  ALTEZZE.find((a) => document.body.classList.contains(`foglio-${a}`)) || 'mezzo'
+
 function foglio(quale) {
   for (const a of ALTEZZE) document.body.classList.toggle(`foglio-${a}`, a === quale)
   maniglia.setAttribute('aria-expanded', String(quale !== 'chiuso'))
+  // Il nome dice dove porta il tocco successivo, non dove siamo: è quello che
+  // serve sapere prima di toccare.
+  maniglia.title = quale === 'pieno' ? 'Chiudi il pannello' : 'Alza il pannello'
   // La tela si riadatta da sola: `Tela` osserva la propria cornice con un
   // ResizeObserver, e la cornice cambia altezza insieme al foglio.
 }
 
 foglio('mezzo')
 
-maniglia.addEventListener('click', () => {
-  const ora = ALTEZZE.findIndex((a) => document.body.classList.contains(`foglio-${a}`))
-  foglio(ALTEZZE[(ora + 1) % ALTEZZE.length])
-})
+/** Un gradino su, e dall'ultimo si torna giù. Una regola sola, prevedibile. */
+function gradino() {
+  const i = ALTEZZE.indexOf(dovE())
+  foglio(ALTEZZE[(i + 1) % ALTEZZE.length])
+}
 
-// Trascinamento: si guarda quanto è alto il foglio quando il dito si stacca e
-// si sceglie l'altezza più vicina. Niente inerzia: qui conta arrivare dove si
-// voleva, non l'effetto.
+// ---------------------------------------------------------------------------
+//  Trascinamento
+//
+//  🔴 Il tocco NON deve passare anche per `click`: trascinando, il browser
+//  manda comunque un click alla fine del gesto, e il foglio faceva un gradino
+//  in più di quello che il dito aveva chiesto. È il motivo per cui alzarlo e
+//  abbassarlo sembrava indocile. Si tiene da parte `mosso` e si ignora quel
+//  click.
+//
+//  Il gesto ha due letture: se è stato un buttatello secco (veloce, corto) si
+//  va di un gradino nel verso del dito; se il dito ha accompagnato il foglio,
+//  si va all'altezza più vicina a dove l'ha lasciato.
+// ---------------------------------------------------------------------------
+
+const SOGLIA_MOSSO = 6 // px: sotto, è un tocco e non un trascinamento
+const SOGLIA_LANCIO = 0.5 // px/ms: sopra, è un buttatello
+
 let presa = null
+let manigliaMossa = false
+
 maniglia.addEventListener('pointerdown', (e) => {
-  presa = { y: e.clientY, altezza: pannello.getBoundingClientRect().height }
+  presa = {
+    y0: e.clientY,
+    y: e.clientY,
+    t: e.timeStamp,
+    altezza: pannello.getBoundingClientRect().height,
+    mosso: false,
+  }
+  document.body.classList.add('foglio-preso')
   maniglia.setPointerCapture(e.pointerId)
 })
+
 maniglia.addEventListener('pointermove', (e) => {
   if (!presa) return
-  const h = Math.max(60, Math.min(innerHeight * 0.86, presa.altezza + (presa.y - e.clientY)))
-  presa.ultima = h
-  pannello.style.maxHeight = `${h}px`
+  const spostamento = presa.y0 - e.clientY
+  if (Math.abs(spostamento) > SOGLIA_MOSSO) presa.mosso = true
+  if (!presa.mosso) return
+  presa.velocita = (presa.y - e.clientY) / Math.max(1, e.timeStamp - presa.t)
+  presa.y = e.clientY
+  presa.t = e.timeStamp
+  const m = mete()
+  presa.ultima = Math.max(
+    m.chiuso - 24,
+    Math.min(innerHeight * 0.86, presa.altezza + spostamento)
+  )
   pannello.style.transition = 'none'
+  pannello.style.maxHeight = `${presa.ultima}px`
 })
-maniglia.addEventListener('pointerup', () => {
+
+function lascia() {
   if (!presa) return
-  const h = presa.ultima
+  const { ultima, velocita = 0, mosso } = presa
   presa = null
+  // `click` arriva dopo `pointerup`: questo segnale gli dice di stare zitto.
+  if (mosso) manigliaMossa = true
+  document.body.classList.remove('foglio-preso')
   pannello.style.maxHeight = ''
   pannello.style.transition = ''
-  if (h == null) return
-  const mete = { chiuso: 136, mezzo: innerHeight * 0.46, pieno: innerHeight * 0.82 }
-  let scelta = 'chiuso'
+  if (!mosso || ultima == null) return
+
+  if (Math.abs(velocita) > SOGLIA_LANCIO) {
+    // Buttatello: un gradino nel verso del dito, senza scavalcarne due.
+    const i = ALTEZZE.indexOf(dovE())
+    foglio(ALTEZZE[Math.max(0, Math.min(ALTEZZE.length - 1, i + (velocita > 0 ? 1 : -1)))])
+    return
+  }
+  const m = mete()
+  let scelta = ALTEZZE[0]
   for (const a of ALTEZZE) {
-    if (Math.abs(mete[a] - h) < Math.abs(mete[scelta] - h)) scelta = a
+    if (Math.abs(m[a] - ultima) < Math.abs(m[scelta] - ultima)) scelta = a
   }
   foglio(scelta)
+}
+
+maniglia.addEventListener('pointerup', lascia)
+maniglia.addEventListener('pointercancel', lascia)
+
+maniglia.addEventListener('click', () => {
+  // Coda del trascinamento: il gesto ha già deciso, questo click non conta.
+  if (manigliaMossa) {
+    manigliaMossa = false
+    return
+  }
+  gradino()
 })

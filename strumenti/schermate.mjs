@@ -249,6 +249,32 @@ await schermata('08-telefono', TELEFONO, async (p) => {
   )
   if (fuori.length) problemi.push(`08: comandi fuori dallo schermo → ${fuori.join(', ')}`)
 
+  // 🔴 Trascinando, il browser manda comunque un `click` alla fine del gesto:
+  // il foglio faceva un gradino IN PIÙ di quello chiesto dal dito, ed è il
+  // motivo per cui alzarlo e abbassarlo sembrava indocile. Qui si trascina
+  // piano dal chiuso fino all'altezza di mezzo e si pretende di restare lì.
+  await p.evaluate(() => {
+    for (const a of ['chiuso', 'mezzo', 'pieno']) document.body.classList.toggle(`foglio-${a}`, a === 'chiuso')
+  })
+  const presa = await p.evaluate(() => {
+    const r = document.getElementById('maniglia-foglio').getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, meta: window.innerHeight * 0.46 - 136 }
+  })
+  await p.mouse.move(presa.x, presa.y)
+  await p.mouse.down()
+  for (let i = 1; i <= 8; i++) {
+    await p.mouse.move(presa.x, presa.y - (presa.meta * i) / 8)
+    await p.waitForTimeout(40)
+  }
+  await p.mouse.up()
+  await p.waitForTimeout(450)
+  const dopoTrascinamento = await p.evaluate(() =>
+    ['chiuso', 'mezzo', 'pieno'].find((a) => document.body.classList.contains(`foglio-${a}`))
+  )
+  if (dopoTrascinamento !== 'mezzo') {
+    problemi.push(`08: trascinando fino a metà il foglio è finito su «${dopoTrascinamento}» (il click di coda non è stato ignorato?)`)
+  }
+
   // Il foglio si alza e si abbassa, e le tre altezze devono essere davvero
   // diverse: una maniglia che non muove niente è peggio che non averla.
   const altezze = []
@@ -265,7 +291,7 @@ await schermata('08-telefono', TELEFONO, async (p) => {
     nota: `${r.layer} layer · bersagli piccoli ${piccoli.length} · ` +
       `scorrimento ${misure.largo || misure.alto ? 'SÌ' : 'no'} · barra ${misure.barraVisibile ? 'visibile' : 'FUORI'} · ` +
       `disegno ${Math.round(quota.disegno * 100)}% · foglio ${altezze.join('/')}px · ` +
-      `comandi fuori ${fuori.length}`,
+      `comandi fuori ${fuori.length} · trascinato → ${dopoTrascinamento}`,
   }
 })
 

@@ -876,32 +876,63 @@ a {
 
   /* Il foglio: tre altezze, dalla striscia degli strumenti a quasi tutto lo
      schermo. */
+  /* La maniglia è alta 44px perché è un bersaglio come gli altri, ma il
+     trattino va CENTRATO nella fascia: lasciato in alto con un margine, i
+     44px sembravano un buco fra la barra e il pannello invece che una presa. */
   .maniglia-foglio {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: sticky;
     top: 0;
     z-index: 3;
     width: 100%;
-    /* 44px anche qui: è un bersaglio come gli altri, e si prende col pollice
-       mentre l'altra mano tiene il metro. */
     height: 44px;
     border: none;
     background: var(--carta);
     border-radius: var(--r-carta) var(--r-carta) 0 0;
-    cursor: pointer;
+    cursor: grab;
     padding: 0;
+    /* Il dito trascina la maniglia: senza questo il browser interpreta il
+       gesto come uno scorrimento della pagina e il foglio non si muove. */
+    touch-action: none;
   }
   .maniglia-foglio .tacca {
     display: block;
-    width: 42px;
-    height: 4px;
-    margin: 20px auto 0;
+    width: 44px;
+    height: 5px;
     border-radius: var(--r-pastiglia);
     background: var(--tenue);
+    transition: width 0.18s var(--uscita), background 0.18s var(--uscita);
+  }
+  /* Mentre la si tiene, il trattino si allarga e si accende: è il modo di
+     dire «l'ho presa, ora seguo il dito» senza scrivere niente. */
+  .maniglia-foglio:active .tacca,
+  body.foglio-preso .maniglia-foglio .tacca {
+    width: 64px;
+    background: var(--blu-chiaro);
+  }
+  body.foglio-preso .maniglia-foglio {
+    cursor: grabbing;
   }
 
   .pannello {
     transition: max-height 0.34s var(--uscita);
+  }
+  /* 🔴 Il foglio finisce dove finisce lo schermo, quindi l'ultima riga
+     visibile è sempre tagliata a metà: senza niente sembra un difetto. Una
+     sfumatura sul bordo basso dice «c'è dell'altro, scorri» invece di
+     «qualcosa si è rotto». Non intercetta i tocchi. */
+  body::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 30px;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(to top, var(--carta), transparent);
   }
   body.foglio-chiuso .pannello {
     max-height: 136px;
@@ -974,6 +1005,11 @@ a {
   .pannello {
     width: 100%;
     flex: 0 0 auto;
+    /* Niente padding in cima: ci pensa la maniglia. E in fondo si lascia
+       spazio alla barra di casa dell'iPhone — la pagina è a tutto schermo
+       (`viewport-fit=cover`), quindi l'ultima riga finirebbe sotto di essa. */
+    padding: 0 6px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--r-carta) var(--r-carta) 0 0;
   }
   .tela-cornice {
     flex: 1 1 0;
@@ -1437,6 +1473,11 @@ code.password {
   }
   .attrezzi {
     position: static;
+  }
+  /* Coricato il pannello è di fianco e non tocca il bordo basso: la sfumatura
+     finirebbe sopra il disegno. */
+  body::after {
+    display: none;
   }
   #sez-strumenti > h2 {
     display: block;
