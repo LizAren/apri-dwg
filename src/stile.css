@@ -796,7 +796,153 @@ a {
 
 /* --- Telefono ------------------------------------------------------------- */
 
+/* Sul computer vale il nome per esteso. */
+.comando .breve {
+  display: none;
+}
+
+/* La maniglia esiste solo sul telefono. */
+.maniglia-foglio {
+  display: none;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 @media (max-width: 860px) {
+  /* ==========================================================================
+     Il telefono non è il computer in piccolo.
+     
+     In campo lo schermo serve al DISEGNO: prima la barra si prendeva un quarto
+     dell'altezza e il pannello un altro 40%, lasciando al disegno meno di un
+     terzo — cioè la cosa più importante era la più piccola. Ora il pannello è
+     un foglio che si alza e si abbassa, e da chiuso lascia fuori solo la
+     striscia degli strumenti, che è ciò che serve al volo.
+     ========================================================================== */
+
+  /* La barra: via il ritorno e il titolo, i comandi su una riga sola che
+     scorre. Chi è sul posto sa già dov'è. */
+  .ritorno,
+  .titolo {
+    display: none;
+  }
+  .barra {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .stato {
+    flex: 1 1 100%;
+    order: -1;
+    font-size: 12px;
+  }
+  .stato .nome {
+    max-width: 22ch;
+  }
+  .comandi {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .comandi::-webkit-scrollbar {
+    display: none;
+  }
+  .comando .lungo {
+    display: none;
+  }
+  .comando .breve {
+    display: inline;
+  }
+  /* Il pallino informazioni non è un comando: lì il testo resta per esteso. */
+  .benvenuto .comando .lungo {
+    display: inline;
+  }
+  .benvenuto .comando .breve {
+    display: none;
+  }
+  .comandi .comando {
+    flex: 0 0 auto;
+    padding: 0 16px;
+    font-size: 14px;
+    /* Su una riga sola: un comando spezzato in due righe alza tutta la barra
+       e ruba altezza al disegno. */
+    white-space: nowrap;
+  }
+
+  /* Il foglio: tre altezze, dalla striscia degli strumenti a quasi tutto lo
+     schermo. */
+  .maniglia-foglio {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    width: 100%;
+    /* 44px anche qui: è un bersaglio come gli altri, e si prende col pollice
+       mentre l'altra mano tiene il metro. */
+    height: 44px;
+    border: none;
+    background: var(--carta);
+    border-radius: var(--r-carta) var(--r-carta) 0 0;
+    cursor: pointer;
+    padding: 0;
+  }
+  .maniglia-foglio .tacca {
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: 20px auto 0;
+    border-radius: var(--r-pastiglia);
+    background: var(--tenue);
+  }
+
+  .pannello {
+    transition: max-height 0.34s var(--uscita);
+  }
+  body.foglio-chiuso .pannello {
+    max-height: 136px;
+  }
+  body.foglio-mezzo .pannello {
+    max-height: 46vh;
+  }
+  body.foglio-pieno .pannello {
+    max-height: 82vh;
+  }
+
+  /* Gli strumenti restano attaccati sotto la maniglia: da foglio chiuso sono
+     l'unica cosa che si vede, ed è quello che serve in campo. */
+  /* 🔴 Sticky sulla STRISCIA, non sulla sezione: il pannello dello strumento
+     vive dentro la stessa sezione e può diventare alto (i simboli sono 71).
+     Fissando la sezione intera, quel pannello resterebbe incollato in cima e
+     coprirebbe il foglio. Così scorre sotto, e la striscia resta a portata. */
+  #sez-strumenti > h2 {
+    display: none;
+  }
+  #sez-strumenti {
+    margin-bottom: 6px;
+  }
+  .attrezzi {
+    position: sticky;
+    top: 44px;
+    z-index: 2;
+    background: var(--carta-soffice);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .attrezzi::-webkit-scrollbar {
+    display: none;
+  }
+  .attrezzo-tasto {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   /* 🔴 Sul telefono ogni bersaglio sta ad almeno 44px, e la pagina non deve
      scorrere: la barra porta i comandi ed è già scivolata fuori una volta. */
   .spazio,
@@ -828,7 +974,6 @@ a {
   .pannello {
     width: 100%;
     flex: 0 0 auto;
-    max-height: 40vh;
   }
   .tela-cornice {
     flex: 1 1 0;
@@ -1247,4 +1392,56 @@ code.password {
 }
 .campo-cartiglio:nth-child(3) {
   grid-column: 1 / -1;
+}
+
+
+/* ===========================================================================
+   Telefono coricato
+   
+   In campo la planimetria è larga e il telefono si gira di lato. Lì il foglio
+   in basso non ha senso: restano 180px di altezza e il pannello mangia metà
+   del poco che c'è. Con lo schermo basso si torna al pannello di fianco, come
+   sul computer, stretto quanto basta a leggere i layer.
+   
+   La condizione è sull'ALTEZZA, non sull'orientamento dichiarato: un tablet
+   coricato ha spazio in verticale e non ha questo problema.
+   =========================================================================== */
+@media (max-width: 900px) and (max-height: 520px) {
+  /* La barra torna su UNA riga: coricato ogni riga in più costa il 12%
+     dell'altezza, e il nome del file può stare accanto ai comandi. */
+  .stato {
+    flex: 1 1 auto;
+    order: 0;
+    min-width: 0;
+  }
+  .barra {
+    padding: 6px 10px;
+    flex-wrap: nowrap;
+  }
+  .corpo {
+    flex-direction: row;
+  }
+  .maniglia-foglio {
+    display: none;
+  }
+  .pannello {
+    width: 236px;
+    flex: 0 0 236px;
+  }
+  /* Le tre altezze del foglio non valgono più: qui il pannello è alto quanto
+     lo schermo. Senza questo, la classe rimasta sul body lo schiaccerebbe. */
+  body.foglio-chiuso .pannello,
+  body.foglio-mezzo .pannello,
+  body.foglio-pieno .pannello {
+    max-height: none;
+  }
+  .attrezzi {
+    position: static;
+  }
+  #sez-strumenti > h2 {
+    display: block;
+  }
+  .tela-cornice {
+    min-height: 0;
+  }
 }

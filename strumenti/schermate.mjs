@@ -77,6 +77,8 @@ async function schermata(nome, opzioni, azione, query = '') {
 
 const SCRIVANIA = { viewport: { width: 1440, height: 900 } }
 const TELEFONO = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }
+// Il telefono coricato: è la posizione con cui si guarda una planimetria larga.
+const CORICATO = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }
 
 console.log('\nSchermate\n' + '─'.repeat(70))
 
@@ -201,7 +203,7 @@ await schermata('08-telefono', TELEFONO, async (p) => {
   // 🔴 Sul telefono ogni comando dev'essere alto almeno 44px: è la regola del
   // repo, ed è già stata violata una volta con pastiglie da 37px.
   const piccoli = await p.evaluate(() =>
-    [...document.querySelectorAll('button.comando, .spazio, .bloccate .voce, .info-tasto')]
+    [...document.querySelectorAll('button.comando, .spazio, .bloccate .voce, .info-tasto, .maniglia-foglio')]
       .filter((b) => b.offsetParent !== null && b.getBoundingClientRect().height < 44)
       .map((b) => `${b.textContent.trim().slice(0, 24)} (${Math.round(b.getBoundingClientRect().height)}px)`)
   )
@@ -219,10 +221,74 @@ await schermata('08-telefono', TELEFONO, async (p) => {
   if (misure.largo) problemi.push('08: la pagina scorre in orizzontale sul telefono')
   if (misure.alto) problemi.push('08: la pagina scorre in verticale sul telefono')
   if (!misure.barraVisibile) problemi.push('08: la barra dei comandi non è sullo schermo')
+
+  // 🔴 In campo lo schermo serve al DISEGNO. Prima il disegno prendeva meno di
+  // un terzo dell'altezza — la cosa più importante era la più piccola — perché
+  // barra e pannello si spartivano il resto. Questo controllo misura la quota
+  // vera in pixel: se qualcuno rialza la barra o riapre il pannello di
+  // default, si vede qui e non sul telefono di chi è sul posto.
+  const quota = await p.evaluate(() => {
+    const t = document.querySelector('.tela-cornice').getBoundingClientRect()
+    return {
+      disegno: t.height / window.innerHeight,
+      chiuso: document.body.classList.contains('foglio-chiuso'),
+      pannello: document.getElementById('pannello').getBoundingClientRect().height,
+    }
+  })
+  if (!quota.chiuso) problemi.push('08: aperto un disegno, il foglio non si è abbassato')
+  if (quota.disegno < 0.6) {
+    problemi.push(`08: al disegno resta il ${Math.round(quota.disegno * 100)}% dell'altezza, atteso almeno 60%`)
+  }
+
+  // 🔴 I comandi devono starci tutti senza scorrere la barra: «Converti in
+  // PDF» era finito fuori dallo schermo, ed è quello che serve in campo.
+  const fuori = await p.evaluate(() =>
+    [...document.querySelectorAll('.comandi .comando')]
+      .filter((b) => b.getBoundingClientRect().right > window.innerWidth + 1)
+      .map((b) => b.textContent.trim())
+  )
+  if (fuori.length) problemi.push(`08: comandi fuori dallo schermo → ${fuori.join(', ')}`)
+
+  // Il foglio si alza e si abbassa, e le tre altezze devono essere davvero
+  // diverse: una maniglia che non muove niente è peggio che non averla.
+  const altezze = []
+  for (let i = 0; i < 3; i++) {
+    await p.click('#maniglia-foglio')
+    await p.evaluate(() => new Promise((r) => setTimeout(r, 420)))
+    altezze.push(await p.evaluate(() => Math.round(document.getElementById('pannello').getBoundingClientRect().height)))
+  }
+  if (new Set(altezze).size !== 3) {
+    problemi.push(`08: il foglio non ha tre altezze distinte → ${altezze.join(' / ')}`)
+  }
+
   return {
     nota: `${r.layer} layer · bersagli piccoli ${piccoli.length} · ` +
-      `scorrimento ${misure.largo || misure.alto ? 'SÌ' : 'no'} · barra ${misure.barraVisibile ? 'visibile' : 'FUORI'}`,
+      `scorrimento ${misure.largo || misure.alto ? 'SÌ' : 'no'} · barra ${misure.barraVisibile ? 'visibile' : 'FUORI'} · ` +
+      `disegno ${Math.round(quota.disegno * 100)}% · foglio ${altezze.join('/')}px · ` +
+      `comandi fuori ${fuori.length}`,
   }
+})
+
+// 🔴 Coricato il foglio non serve: con 390px di altezza mangerebbe metà dello
+// schermo. Il pannello torna di fianco, e il disegno resta alto quanto la
+// finestra.
+await schermata('12-telefono-coricato', CORICATO, async (p) => {
+  const r = await apri(p, 'example_2018.dwg')
+  const m = await p.evaluate(() => {
+    const t = document.querySelector('.tela-cornice').getBoundingClientRect()
+    const q = document.getElementById('pannello').getBoundingClientRect()
+    return {
+      fianco: q.right <= t.left + 1 || t.right <= q.left + 1,
+      altezza: t.height / window.innerHeight,
+      maniglia: document.getElementById('maniglia-foglio').offsetParent !== null,
+      scorre: document.documentElement.scrollHeight > window.innerHeight + 1,
+    }
+  })
+  if (!m.fianco) problemi.push('12: coricato il pannello non è di fianco al disegno')
+  if (m.maniglia) problemi.push('12: coricato la maniglia del foglio si vede ancora')
+  if (m.altezza < 0.75) problemi.push(`12: coricato al disegno resta il ${Math.round(m.altezza * 100)}% dell'altezza`)
+  if (m.scorre) problemi.push('12: la pagina scorre in verticale col telefono coricato')
+  return { nota: `${r.layer} layer · pannello di fianco · disegno ${Math.round(m.altezza * 100)}% dell'altezza` }
 })
 
 // ---------------------------------------------------------------------------

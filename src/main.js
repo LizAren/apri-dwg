@@ -95,6 +95,11 @@ const strumenti = new Strumenti({
   elenco: $('funzioni'),
   sezioneElenco: $('sez-funzioni'),
   esito: $('strumento-esito'),
+  // Sul telefono, scegliere uno strumento alza il foglio: il pannello dello
+  // strumento sta sotto la striscia, e da foglio chiuso non si vedrebbe.
+  cambiato: (nome) => {
+    if (nome && document.body.classList.contains('foglio-chiuso')) foglio('mezzo')
+  },
   formato: formatoLunghezza,
   formatoArea,
   visibile: (layer) => layerVisibili.has(layer),
@@ -227,6 +232,9 @@ async function apri(file) {
     await riprendiLavoro()
     $('benvenuto').hidden = true
     for (const b of ['btn-tutto', 'btn-fondo', 'btn-pdf']) $(b).disabled = false
+    // Appena c'è un disegno, sul telefono il foglio si abbassa: lo schermo
+    // serve al disegno, e gli strumenti restano fuori comunque.
+    foglio('chiuso')
   } catch (e) {
     console.error(e)
     mostraErrore(e.message || String(e))
@@ -352,12 +360,28 @@ function disegnaRapporto() {
 //  Comandi di vista
 // ---------------------------------------------------------------------------
 
+// I comandi della barra hanno due nomi: quello per esteso sul computer e uno
+// corto sul telefono, dove ci stanno tutti e cinque su una riga sola. Non è un
+// vezzo: con i nomi lunghi «Converti in PDF» finiva fuori dallo schermo, e in
+// campo è il comando che serve.
+function etichetta(bottone, lungo, breve) {
+  bottone.innerHTML = ''
+  for (const [classe, testo] of [['lungo', lungo], ['breve', breve]]) {
+    const s = document.createElement('span')
+    s.className = classe
+    s.textContent = testo
+    bottone.appendChild(s)
+  }
+}
+
 $('btn-tutto').addEventListener('click', () => tela.zoomTutto())
 
 $('btn-fondo').addEventListener('click', () => {
   tela.fondoChiaro = !tela.fondoChiaro
   $('btn-fondo').setAttribute('aria-pressed', String(tela.fondoChiaro))
-  $('btn-fondo').textContent = tela.fondoChiaro ? 'Fondo scuro' : 'Fondo bianco'
+  etichetta($('btn-fondo'),
+    tela.fondoChiaro ? 'Fondo scuro' : 'Fondo bianco',
+    tela.fondoChiaro ? 'Scuro' : 'Chiaro')
   document.querySelector('.tela-cornice').style.background = tela.fondoChiaro ? '#fff' : ''
   if (modello) disegnaLayer()
   tela.ridisegna()
@@ -646,3 +670,63 @@ const escapa = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
   )
+
+
+// ---------------------------------------------------------------------------
+//  Il foglio del telefono
+//
+//  In campo lo schermo è piccolo e la mano è una sola. Il pannello, che sul
+//  computer sta sempre aperto di fianco, sul telefono diventa un foglio con
+//  tre altezze: CHIUSO lascia fuori la sola striscia degli strumenti (quella
+//  che serve al volo), MEZZO mostra layer e spazi, PIENO serve a compilare
+//  la tavola. Si tocca la maniglia per passare da una all'altra, o la si
+//  trascina — perché il pollice fa quel gesto senza pensarci.
+// ---------------------------------------------------------------------------
+
+const ALTEZZE = ['chiuso', 'mezzo', 'pieno']
+const maniglia = $('maniglia-foglio')
+const pannello = $('pannello')
+
+function foglio(quale) {
+  for (const a of ALTEZZE) document.body.classList.toggle(`foglio-${a}`, a === quale)
+  maniglia.setAttribute('aria-expanded', String(quale !== 'chiuso'))
+  // La tela si riadatta da sola: `Tela` osserva la propria cornice con un
+  // ResizeObserver, e la cornice cambia altezza insieme al foglio.
+}
+
+foglio('mezzo')
+
+maniglia.addEventListener('click', () => {
+  const ora = ALTEZZE.findIndex((a) => document.body.classList.contains(`foglio-${a}`))
+  foglio(ALTEZZE[(ora + 1) % ALTEZZE.length])
+})
+
+// Trascinamento: si guarda quanto è alto il foglio quando il dito si stacca e
+// si sceglie l'altezza più vicina. Niente inerzia: qui conta arrivare dove si
+// voleva, non l'effetto.
+let presa = null
+maniglia.addEventListener('pointerdown', (e) => {
+  presa = { y: e.clientY, altezza: pannello.getBoundingClientRect().height }
+  maniglia.setPointerCapture(e.pointerId)
+})
+maniglia.addEventListener('pointermove', (e) => {
+  if (!presa) return
+  const h = Math.max(60, Math.min(innerHeight * 0.86, presa.altezza + (presa.y - e.clientY)))
+  presa.ultima = h
+  pannello.style.maxHeight = `${h}px`
+  pannello.style.transition = 'none'
+})
+maniglia.addEventListener('pointerup', () => {
+  if (!presa) return
+  const h = presa.ultima
+  presa = null
+  pannello.style.maxHeight = ''
+  pannello.style.transition = ''
+  if (h == null) return
+  const mete = { chiuso: 136, mezzo: innerHeight * 0.46, pieno: innerHeight * 0.82 }
+  let scelta = 'chiuso'
+  for (const a of ALTEZZE) {
+    if (Math.abs(mete[a] - h) < Math.abs(mete[scelta] - h)) scelta = a
+  }
+  foglio(scelta)
+})

@@ -99,6 +99,17 @@ node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 - **`hidden` perde contro qualsiasi `display` dichiarato nel foglio di stile.**
   Il pannello d'ingresso restava sopra il disegno e sembrava che il disegno non
   ci fosse: si è visto solo guardando una schermata.
+- **Sul telefono la quota del disegno si MISURA.** Barra a tre righe e pannello
+  fisso al 40% lasciavano al disegno meno di un terzo dello schermo: la cosa più
+  importante era la più piccola. Ora la prova `08-telefono` pretende almeno il
+  **60%** dell'altezza (misurato: 70%) e la `12-telefono-coricato` almeno il
+  **75%** (misurato: 79%). Senza il numero, il difetto torna al primo ritocco.
+- **Il dito non è un mouse.** Aggancio, scelta e maniglie raddoppiano di
+  tolleranza su `pointer: coarse` — condizione sul **puntatore**, non sulla
+  larghezza dello schermo: un tablet con la penna deve restare fine.
+- **Lo `sticky` va sulla striscia degli strumenti, non sulla sezione** che la
+  contiene: lì dentro vive anche il pannello dello strumento, che con 71
+  simboli diventa alto e resterebbe incollato in cima a coprire il foglio.
 
 ## Numeri veri, misurati online
 

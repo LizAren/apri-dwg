@@ -45,7 +45,8 @@
 
       <div class="comandi">
         <button type="button" class="comando primario" id="btn-apri">
-          Apri un disegno
+          <span class="lungo">Apri un disegno</span
+          ><span class="breve">Apri</span>
         </button>
         <button
           type="button"
@@ -54,7 +55,8 @@
           disabled
           title="Inquadra tutto (tasto Z)"
         >
-          Inquadra tutto
+          <span class="lungo">Inquadra tutto</span
+          ><span class="breve">Tutto</span>
         </button>
         <button
           type="button"
@@ -63,10 +65,12 @@
           disabled
           aria-pressed="false"
         >
-          Fondo bianco
+          <span class="lungo">Fondo bianco</span
+          ><span class="breve">Chiaro</span>
         </button>
         <button type="button" class="comando primario" id="btn-pdf" disabled>
-          Converti in PDF
+          <span class="lungo">Converti in PDF</span
+          ><span class="breve">PDF</span>
         </button>
         <button type="button" class="comando" id="btn-accedi">Accedi</button>
       </div>
@@ -75,6 +79,19 @@
 
     <main class="corpo">
       <aside class="pannello" id="pannello" aria-label="Pannello del disegno">
+        <!-- Solo sul telefono: la maniglia che alza e abbassa il foglio. Sul
+             computer non compare, perché lì il pannello sta sempre aperto. -->
+        <button
+          type="button"
+          class="maniglia-foglio"
+          id="maniglia-foglio"
+          aria-expanded="false"
+          aria-controls="pannello"
+        >
+          <span class="tacca" aria-hidden="true"></span>
+          <span class="sr-only">Alza o abbassa il pannello</span>
+        </button>
+
         <section class="blocco" hidden id="sez-strumenti">
           <h2>Strumenti</h2>
           <div class="elenco attrezzi" id="strumenti"></div>

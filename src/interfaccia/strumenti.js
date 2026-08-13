@@ -19,10 +19,22 @@ import { SIMBOLI, CATEGORIE, PER_ID, formeSimbolo, coloreDi } from '../modello/s
 import { confronta, COLORI_CONFRONTO } from '../modello/confronto.js'
 import { calcolaEstensione } from '../modello/normalizza.js'
 
+// 🔴 Un dito non è un mouse: copre una decina di pixel e non si vede cosa c'è
+// sotto. Con le tolleranze del mouse, in campo, agganciare un estremo o
+// afferrare la maniglia di un simbolo diventa questione di fortuna. Qui si
+// raddoppia — misurato sul puntatore, non sulla larghezza dello schermo: un
+// tablet con la penna resta fine, un telefono no.
+const DITO =
+  typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+    ? 2
+    : 1
+
 /** Quanti pixel attorno al puntatore si guardano per agganciare. */
-const RAGGIO_PX = 16
+const RAGGIO_PX = 16 * DITO
 /** Quanti pixel di tolleranza per dire «ho cliccato QUESTO». */
-const TOLLERANZA_PX = 8
+const TOLLERANZA_PX = 8 * DITO
+/** Il lato della maniglia disegnata: col dito va vista e presa. */
+const MANIGLIA_PX = 5 * DITO
 
 export class Strumenti {
   /**
@@ -132,14 +144,6 @@ export class Strumenti {
     if (this.attivo === 'confronto' && nome !== 'confronto' && this.spazioPrima) {
       this.spazio = this.spazioPrima
       this.spazioPrima = null
-    this.viste = []
-    // I dati del cartiglio si ricordano fra una tavola e l'altra: chi ne
-    // stampa cinque non riscrive cinque volte committente e oggetto.
-    this.cartiglio = {
-      committente: '', comune: '', oggetto: '', titolo: 'Planimetria',
-      numero: '1', data: new Date().toLocaleDateString('it-IT'),
-      redattore: '', revisione: '0',
-    }
       this.indice = null
       this.tela.mostra(this.spazio)
     }
@@ -188,7 +192,7 @@ export class Strumenti {
       }
 
       // Senza armare: si sceglie, si sposta, si ridimensiona.
-      const tolleranza = 9 / this.tela.zoom
+      const tolleranza = (9 * DITO) / this.tela.zoom
       const maniglia = this._manigliaSotto(x, y, tolleranza)
       if (maniglia) {
         this.trascina = { tipo: 'maniglia', ...maniglia, da: [x, y] }
@@ -544,15 +548,16 @@ export class Strumenti {
       ctx.strokeStyle = '#ffffff'
       ctx.fillStyle = '#12161c'
       ctx.lineWidth = 1.6
-      for (const m of this._maniglie(n)) {
-        const [sx, sy] = this.tela.aSchermo(m.x, m.y)
-        ctx.fillRect(sx - 5, sy - 5, 10, 10)
-        ctx.strokeRect(sx - 5, sy - 5, 10, 10)
+      const m = MANIGLIA_PX
+      for (const q of this._maniglie(n)) {
+        const [sx, sy] = this.tela.aSchermo(q.x, q.y)
+        ctx.fillRect(sx - m, sy - m, m * 2, m * 2)
+        ctx.strokeRect(sx - m, sy - m, m * 2, m * 2)
       }
       if (n.tipo === 'testo') {
         const [sx, sy] = this.tela.aSchermo(n.punti[0], n.punti[1])
-        ctx.fillRect(sx - 5, sy - 5, 10, 10)
-        ctx.strokeRect(sx - 5, sy - 5, 10, 10)
+        ctx.fillRect(sx - m, sy - m, m * 2, m * 2)
+        ctx.strokeRect(sx - m, sy - m, m * 2, m * 2)
       }
       ctx.restore()
     }
