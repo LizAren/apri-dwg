@@ -476,9 +476,32 @@ function aggiungiTesto(ctx, m, comune, t) {
   const scala = g.scalaDi(m)
   const altezza = t.altezza * scala
   const rotazione = t.rotazione + g.rotazioneDi(m)
-  // Ingombro stimato: 0,6 di larghezza media per carattere. Serve solo a
-  // scartare i testi fuori schermo, non a impaginare.
+  // Ingombro stimato: 0,6 di larghezza media per carattere.
+  //
+  // 🔴 Il riquadro NON è simmetrico attorno al punto di inserzione, e prima lo
+  // era: si prendeva `larghezza` tanto a sinistra quanto a destra. Un testo
+  // allineato a sinistra però parte DA lì e va a destra, quindi metà del
+  // riquadro cadeva sul vuoto — e siccome da questi riquadri esce
+  // `calcolaEstensione`, una didascalia lunga inventava metri di disegno
+  // inesistente. Conseguenze vere: «Inquadra tutto» lasciava il disegno
+  // piccolo in mezzo allo schermo, e la scala automatica del PDF usciva più
+  // piccola del dovuto. Misurato su una pianta con una riga di note in fondo:
+  // estensione da -10500 invece di -2900, cioè 7,6 m di niente.
   const larghezza = t.testo.length * altezza * 0.6
+  // 0 sinistra, 1 centro, 2 destra: sono i codici del formato.
+  const da = t.allineamento === 1 ? -larghezza / 2 : t.allineamento === 2 ? -larghezza : 0
+  // Sotto la linea di base ci stanno le code delle lettere, sopra le maiuscole.
+  const angoli = [
+    [da, -altezza * 0.3], [da + larghezza, -altezza * 0.3],
+    [da + larghezza, altezza * 1.1], [da, altezza * 1.1],
+  ]
+  // Ruotato, il riquadro va ruotato con lui: un testo verticale altrimenti
+  // dichiara un ingombro orizzontale e viene scartato dal disegno appena esce
+  // di lato.
+  const cs = Math.cos(rotazione)
+  const sn = Math.sin(rotazione)
+  const xs = angoli.map(([a, b]) => x + a * cs - b * sn)
+  const ys = angoli.map(([a, b]) => y + a * sn + b * cs)
   ctx.primitive.push({
     tipo: 'testo',
     testo: t.testo,
@@ -492,10 +515,7 @@ function aggiungiTesto(ctx, m, comune, t) {
     spessore: comune.spessore,
     origine: comune.origine,
     handle: comune.handle,
-    ingombro: [
-      x - larghezza, y - altezza * 1.5,
-      x + larghezza, y + altezza * 1.5,
-    ],
+    ingombro: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
   })
 }
 

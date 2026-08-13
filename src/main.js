@@ -1,4 +1,4 @@
-// Apri DWG — visualizzatore DWG/DXF e convertitore in PDF, tutto nel browser.
+// Cianotipo — visualizzatore DWG/DXF e convertitore in PDF, tutto nel browser.
 // Copyright (C) 2026  Stefano Fostinelli
 //
 // Questo programma è software libero: puoi ridistribuirlo e/o modificarlo
@@ -665,6 +665,20 @@ const accesso = new Accesso({
 
 aggiornaPermessi()
 accesso.riprendi()
+
+// ---------------------------------------------------------------------------
+//  Un solo gancio per gli strumenti di verifica.
+//
+//  Le prove devono poter dire «clicca sul punto (300, 300) del DISEGNO». Senza
+//  questo se la ricavano riscrivendosi a mano la trasformazione — e una copia
+//  della formula prima o poi diverge da quella vera, misurando il posto
+//  sbagliato senza dirlo. Non è un'interfaccia pubblica: è il minimo che serve
+//  a non far mentire lo strumento di misura.
+// ---------------------------------------------------------------------------
+window.__vista = {
+  aSchermo: (x, y) => tela.aSchermo(x, y),
+  inquadra: (r) => tela.inquadra(r),
+}
 
 const escapa = (s) =>
   String(s).replace(/[&<>"']/g, (c) =>

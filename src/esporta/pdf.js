@@ -394,7 +394,14 @@ export async function esportaTavola(modello, spazio, o) {
 
   const utileL = LF - MARGINE * 2 - COLONNA - RESPIRO
   const utileA = AF - MARGINE * 2
-  const g = grigliaMigliore(viste.length, utileL, utileA, RESPIRO)
+  // La griglia si sceglie sapendo COSA ci va dentro: la proporzione media
+  // delle inquadrature scelte. Una pianta larga dentro due celle strette resta
+  // piccola in mezzo al bianco, e non è un problema di scala, è di griglia.
+  const aspetti = viste.map((v) =>
+    Math.max(1e-9, v.rett[2] - v.rett[0]) / Math.max(1e-9, v.rett[3] - v.rett[1])
+  )
+  const aspettoMedio = aspetti.reduce((x, y) => x + y, 0) / aspetti.length
+  const g = grigliaMigliore(viste.length, utileL, utileA, RESPIRO, aspettoMedio)
 
   const mmPerUnita = spazio.carta ? 1 : modello.unita.mm || o.mmPerUnitaSupposto || 1
   const simboli = new Map()
@@ -486,18 +493,55 @@ export async function esportaTavola(modello, spazio, o) {
  * preferisce la cella meno allungata, perché una vista lunga e stretta non si
  * legge. (Stesso criterio della tavola del GIS.)
  */
-function grigliaMigliore(n, larghezza, altezza, respiro) {
-  let scelta = { righe: 1, colonne: n, punteggio: 0, l: larghezza, a: altezza }
+/**
+ * La disposizione delle viste sul foglio.
+ *
+ * 🔴 Non si cerca la cella più GRANDE, si cerca quella in cui entra più
+ * DISEGNO. Prima il punteggio premiava le celle quadrate a prescindere da cosa
+ * ci finiva dentro: una pianta larga 3:2 su un A3 orizzontale finiva in due
+ * colonne strette e restava piccola in mezzo al bianco, con metà foglio vuoto.
+ * Ora si misura quanto è grande il disegno una volta INFILATO nella cella —
+ * che è la cosa che poi si guarda.
+ *
+ * @param {number} aspetto  larghezza/altezza di ciò che va disegnato
+ */
+function grigliaMigliore(n, larghezza, altezza, respiro, aspetto = 1) {
+  let scelta = null
   for (let righe = 1; righe <= n; righe++) {
     const colonne = Math.ceil(n / righe)
     const l = (larghezza - respiro * (colonne - 1)) / colonne
     const a = (altezza - respiro * (righe - 1)) / righe
     if (l <= 20 || a <= 20) continue
-    const proporzione = Math.max(l / a, a / l)
-    const punteggio = (l * a) / proporzione
-    if (punteggio > scelta.punteggio) scelta = { righe, colonne, punteggio, l, a }
+    // Quanto misura il disegno una volta entrato nella cella, mantenendo la
+    // sua proporzione: è alto quanto la cella, o largo quanto la cella.
+    const disegnata = l / a > aspetto ? a * aspetto * a : (l * l) / aspetto
+    if (!scelta || disegnata > scelta.punteggio) {
+      scelta = { righe, colonne, punteggio: disegnata, l, a }
+    }
   }
-  return scelta
+  return scelta || { righe: 1, colonne: n, punteggio: 0, l: larghezza, a: altezza }
+}
+
+/**
+ * Il testo di una cella del cartiglio, ridotto finché ci sta.
+ *
+ * 🔴 Prima si passava `maxWidth` a jsPDF, che però NON rimpicciolisce: manda a
+ * capo. E siccome la riga si scrive appoggiata al fondo della cella, la seconda
+ * riga finiva sopra la cella sotto — «Comune di Cividate Camuno» si mangiava la
+ * riga OGGETTO. In un cartiglio il testo si stringe, e se proprio non ci sta si
+ * taglia dichiarando il taglio.
+ */
+function testoInCella(doc, testo, larghezza, corpo = 7, minimo = 4.4) {
+  let c = corpo
+  doc.setFontSize(c)
+  while (c > minimo && doc.getTextWidth(testo) > larghezza) {
+    c -= 0.2
+    doc.setFontSize(c)
+  }
+  if (doc.getTextWidth(testo) <= larghezza) return testo
+  let t = testo
+  while (t.length > 1 && doc.getTextWidth(`${t}…`) > larghezza) t = t.slice(0, -1)
+  return `${t}…`
 }
 
 /** Disegna una vista dentro il suo riquadro e raccoglie le voci di legenda. */
@@ -694,9 +738,9 @@ function cartiglio(doc, d) {
       doc.setFontSize(5)
       doc.setTextColor('#7a7a7a')
       doc.text(String(cella[0]).toUpperCase(), cx + 1.8, cy + 3.2)
-      doc.setFontSize(7)
       doc.setTextColor('#141414')
-      doc.text(String(cella[1] || '—'), cx + 1.8, cy + hRiga - 2, { maxWidth: larga - 3.6 })
+      const dentro = testoInCella(doc, String(cella[1] || '—'), larga - 3.6)
+      doc.text(dentro, cx + 1.8, cy + hRiga - 2)
     })
     cy += hRiga
   }

@@ -800,6 +800,10 @@ export class Strumenti {
       const b = document.createElement('button')
       b.type = 'button'
       b.className = 'attrezzo-tasto'
+      // Il nome dello strumento anche in un attributo: serve a puntarlo dalle
+      // prove e dalle catture senza dover indovinare dall'etichetta, che sul
+      // telefono è pure diversa.
+      b.dataset.attrezzo = f.id
       b.setAttribute('aria-pressed', String(this.attivo === f.id))
       b.innerHTML = `${iconaDi(f.id)}<span>${f.breve || f.nome}</span>`
       b.addEventListener('click', () => this.attiva(f.id))

@@ -50,14 +50,21 @@ export class Tela {
   /** Inquadra tutto il disegno con un margine del 4%. */
   zoomTutto() {
     if (!this.spazio) return
-    const e = this.spazio.estensione
+    this.inquadra(this.spazio.estensione)
+  }
+
+  /**
+   * Porta l'inquadratura su un rettangolo del disegno, con lo stesso margine.
+   * @param {number[]} r  [x0, y0, x1, y1] in coordinate del disegno
+   */
+  inquadra(r) {
     const l = this.canvas.clientWidth || 1
     const a = this.canvas.clientHeight || 1
-    const larghezza = Math.max(1e-9, e[2] - e[0])
-    const altezza = Math.max(1e-9, e[3] - e[1])
+    const larghezza = Math.max(1e-9, r[2] - r[0])
+    const altezza = Math.max(1e-9, r[3] - r[1])
     this.zoom = Math.min(l / larghezza, a / altezza) * 0.92
-    this.cx = (e[0] + e[2]) / 2
-    this.cy = (e[1] + e[3]) / 2
+    this.cx = (r[0] + r[2]) / 2
+    this.cy = (r[1] + r[3]) / 2
     this.ridisegna()
   }
 

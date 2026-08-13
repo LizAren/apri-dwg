@@ -16,7 +16,7 @@ Lo studio completo è in [`docs/contesto/dwg.md`](../docs/contesto/dwg.md).
 npm install
 npm run dev        # sviluppo, apre su localhost
 npm run build      # produce dist/ (~13 MB: il lettore DWG intero più la sua copia compressa)
-npm run verifica   # 102 controlli misurati sui file di prova
+npm run verifica   # 118 controlli misurati sui file di prova
 node strumenti/schermate.mjs      # apre l'app in un browser vero e la fotografa
 node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 ./deploy-dwg.sh --build        # compila e pubblica su Altervista
@@ -33,7 +33,7 @@ node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 | `src/interfaccia/` | le funzioni bloccate e la richiesta di accesso |
 | `src/vista/aggancio.js` | indice spaziale, selezione e aggancio (estremo, centro, intersezione, medio) |
 | `api/` | PHP: accesso e account. 🔴 `config.php` non è qui e non si carica mai |
-| `strumenti/` | `verifica.mjs` (dati), `schermate.mjs` (pixel), `prova-accesso.mjs` (PHP e database veri), `prepara-avvio.mjs` (script usa e getta) |
+| `strumenti/` | `verifica.mjs` (dati), `schermate.mjs` (pixel), `esempio.mjs` (il disegno d'esempio), `prova-accesso.mjs` (PHP e database veri), `prepara-avvio.mjs` (script usa e getta) |
 | `prove/file/` | quattro DWG veri (r2000, r2004, r2007, r2018) più un DXF a geometria nota |
 
 ## Le regole non negoziabili di questa cartella
@@ -99,6 +99,19 @@ node strumenti/prova-accesso.mjs  # accesso e account con PHP e MySQL veri
 - **`hidden` perde contro qualsiasi `display` dichiarato nel foglio di stile.**
   Il pannello d'ingresso restava sopra il disegno e sembrava che il disegno non
   ci fosse: si è visto solo guardando una schermata.
+- **L'ingombro di un testo non è simmetrico.** Un testo allineato a sinistra
+  parte dal punto di inserzione e va a destra: prendendo la larghezza da
+  entrambe le parti, metà riquadro cade sul vuoto — e da quei riquadri esce
+  `calcolaEstensione`, quindi una didascalia lunga **inventa metri di disegno**
+  (misurato: 7,6 m). Si vede in due posti lontani fra loro: «Inquadra tutto»
+  che lascia il disegno piccolo, e la **scala automatica del PDF** più piccola
+  del dovuto.
+- **`maxWidth` di jsPDF NON rimpicciolisce: manda a capo.** Nelle celle del
+  cartiglio, dove la riga si appoggia al fondo, la seconda riga finisce sopra la
+  cella sotto. Lì il testo si stringe, e se non ci sta si taglia dichiarandolo.
+- **La griglia della tavola si sceglie su quanto DISEGNO entra**, non su quanto
+  è grande la cella: premiando le celle quadrate, una pianta larga finisce in
+  due colonne strette e resta piccola in mezzo al bianco.
 - **Sul telefono la quota del disegno si MISURA.** Barra a tre righe e pannello
   fisso al 40% lasciavano al disegno meno di un terzo dello schermo: la cosa più
   importante era la più piccola. Ora la prova `08-telefono` pretende almeno il
