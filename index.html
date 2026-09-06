@@ -72,7 +72,31 @@
           <span class="lungo">Converti in PDF</span
           ><span class="breve">PDF</span>
         </button>
-        <button type="button" class="comando" id="btn-accedi">Accedi</button>
+        <!-- L'account è un pallino, non un comando col nome scritto: non è una
+             cosa che si fa sul disegno, è chi sei. Sta in fondo alla riga
+             perché è lì che si cerca, e libera i ~74px che «Accedi» si
+             prendeva in una barra che entra esatta in un telefono.
+             🔴 Niente `hidden` sull'`<svg>`: `hidden` è una proprietà di
+             `HTMLElement` e su un `SVGElement` non tocca l'attributo — lezione
+             già pagata altrove, con l'omino e le iniziali uno sopra l'altro.
+             Quale dei due si veda lo decide il CSS a partire da `.acceso`. -->
+        <button type="button" class="pallino" id="btn-accedi" title="Accedi">
+          <span class="pallino-iniziali" id="accedi-iniziali"></span>
+          <svg
+            class="pallino-omino"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="8" r="3.6" />
+            <path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" />
+          </svg>
+          <span class="sr-only">Accedi</span>
+        </button>
       </div>
       <input type="file" id="file" accept=".dwg,.dxf" hidden />
     </header>
@@ -214,6 +238,39 @@
             <span aria-hidden="true">i</span>
           </button>
         </div>
+
+        <!-- Il caffè sta QUI e non fra i comandi, e non è una preferenza: la
+             riga dei comandi è tarata per entrare esatta in un telefono da
+             390px — `strumenti/schermate.mjs` conta chi sborda e pretende
+             zero — quindi qualunque aggiunta la rompe. E il posto è comunque
+             quello giusto: questo angolo tiene le cose che riguardano la
+             PAGINA (licenza, privacy, chi l'ha fatta), non il disegno.
+             🔴 Sta DOPO `.info` nel documento perché il CSS lo faccia sparire
+             quando la scheda delle informazioni si apre e verrebbe coperto:
+             `~` guarda solo in avanti. -->
+        <button
+          type="button"
+          class="caffe"
+          id="btn-caffe"
+          title="Offrimi un caffè (facoltativo)"
+        >
+    <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    >
+    <path d="M5 8.5h11v5a5.5 5.5 0 0 1-11 0Z" />
+    <path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" />
+    <path d="M3.5 20.5h14" />
+    <path d="M9 5.6c-.7-.8.7-1.6 0-2.4" />
+    <path d="M12.8 5.6c-.7-.8.7-1.6 0-2.4" />
+    </svg>
+          <span class="sr-only">Offrimi un caffè</span>
+        </button>
       </div>
     </main>
 
@@ -292,6 +349,40 @@
         </div>
         <div class="finestra-comandi">
           <button type="button" class="comando" id="accesso-chiudi">
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Il caffè ---------------------------------------------------------
+         Facoltativo, e NON sblocca niente: soprattutto non le funzioni col
+         lucchetto, che si chiedono e basta. È ciò che lo tiene una donazione
+         invece che il prezzo di un permesso — e su questa pagina, dove un
+         listino esiste davvero, il confine va detto per esteso.
+         Un link, non un modulo: niente passa dal server, non c'è niente da
+         verificare perché non c'è niente da consegnare. -->
+    <dialog class="finestra" id="finestra-caffe">
+      <div class="finestra-dentro">
+        <h2>Offrimi un caffè</h2>
+        <p>
+          Cianotipo è gratuito e resta tale. Questo tasto
+          <strong>non compra niente</strong>: non sblocca le funzioni col
+          lucchetto, non toglie limiti, non cambia una virgola di quello che
+          vedi. È solo un modo per dire che lo strumento ti è servito.
+        </p>
+        <p class="nota">
+          Le funzioni bloccate si chiedono dal loro pannello, e restano una
+          cosa a parte: un caffè non le apre e non le avvicina.
+        </p>
+        <div class="recapiti">
+          <a class="comando primario" id="caffe-vai" href="#"
+             target="_blank" rel="noopener noreferrer"
+            >Offri un caffè su PayPal</a
+          >
+        </div>
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="caffe-chiudi">
             Chiudi
           </button>
         </div>

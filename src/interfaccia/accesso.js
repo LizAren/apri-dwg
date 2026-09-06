@@ -105,13 +105,18 @@ export class Accesso {
   // -------------------------------------------------------------------------
 
   _disegnaTasto() {
+    const iniziali = this.tasto.querySelector('.pallino-iniziali')
     if (!this.utente) {
-      this.tasto.textContent = 'Accedi'
       this.tasto.classList.remove('acceso')
+      this.tasto.title = 'Accedi'
+      if (iniziali) iniziali.textContent = ''
       return
     }
-    this.tasto.textContent = this.utente.nome
     this.tasto.classList.add('acceso')
+    /* Il nome per esteso non ci sta in un pallino: sta nel `title` e dentro il
+       pannello, che è il posto dove serve leggerlo per intero. */
+    this.tasto.title = this.utente.nome
+    if (iniziali) iniziali.textContent = iniziliDi(this.utente.nome)
   }
 
   _collega() {
@@ -351,4 +356,12 @@ export class Accesso {
       'Si vede solo adesso: nel database resta solo l\'impronta. Copiarla e comunicarla all\'interessato.'
     dove.append(t, c, n)
   }
+}
+
+/** Al massimo due lettere: «Mario Rossi» → MR, «stefano» → S. Un pallino con
+ *  tre iniziali diventa una parola illeggibile a 14px. */
+function iniziliDi(nome) {
+  const parti = String(nome || '').trim().split(/\s+/).filter(Boolean)
+  if (!parti.length) return '?'
+  return parti.slice(0, 2).map((p) => p[0].toUpperCase()).join('')
 }

@@ -613,6 +613,48 @@ a {
   white-space: nowrap;
 }
 
+/* --- Il caffè -------------------------------------------------------------
+   Pastiglia gemella del pallino informazioni, appena a sinistra: stessa
+   misura, stesso fondo, stessa ombra. Sta in questo angolo perché è l'angolo
+   delle cose che riguardano la pagina, non il disegno — e perché la riga dei
+   comandi entra esatta in un telefono e non ha un posto da darle.
+   Da fermo è la cosa più discreta della pagina, il blu arriva solo al
+   passaggio: un'offerta facoltativa non si mette in mezzo al lavoro. */
+
+.caffe {
+  position: absolute;
+  right: 56px;                /* 34 del pallino + 14 di margine + 8 di stacco */
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: var(--carta);
+  border-radius: var(--r-pastiglia);
+  box-shadow: var(--ombra);
+  color: var(--tenue);
+  cursor: pointer;
+  transition:
+    color 0.2s var(--uscita),
+    opacity 0.24s var(--uscita);
+}
+.caffe svg {
+  width: 19px;
+  height: 19px;
+}
+.caffe:hover {
+  color: var(--blu-chiaro);
+}
+/* Aprendo le informazioni la scheda si allarga verso sinistra e passerebbe
+   sopra la tazzina: invece di sovrapporsi, si toglie di mezzo. */
+.info[data-aperto='true'] ~ .caffe {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* --- Pallino informazioni ------------------------------------------------- */
 
 /* Chiuso è un cerchio da 44. Aperto si allunga in una scheda con lo stesso
@@ -990,6 +1032,13 @@ a {
     width: 44px;
     height: 44px;
   }
+  /* Il pallino passa a 44 per il dito: la tazzina lo segue in misura e in
+     distanza, se no restano disallineate e a mezzo pollice l'una dall'altra. */
+  .caffe {
+    width: 44px;
+    height: 44px;
+    right: 66px;
+  }
   .info[data-aperto='true'] {
     width: min(360px, calc(100% - 28px));
   }
@@ -1145,9 +1194,59 @@ a {
 
 /* --- Accesso e account ---------------------------------------------------- */
 
-.comando.acceso {
-  background: var(--blu-scuro);
+/* Il pallino dell'account. Tondo, della stessa altezza dei comandi così non fa
+   un gradino in mezzo alla fila, ma senza nome scritto: l'account non è una
+   cosa che si fa sul disegno.
+   Spento è l'omino sul fondo dei comandi; acceso sono le INIZIALI sul blu —
+   che a colpo d'occhio dice due cose insieme, che sei dentro e chi sei. */
+.pallino {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: var(--carta-alta);
+  color: var(--attenuato);
+  cursor: pointer;
+  flex: none;
+  transition:
+    background 0.2s var(--uscita),
+    color 0.2s var(--uscita);
+}
+.pallino:hover {
+  background: var(--bordo);
+  color: var(--inchiostro);
+}
+.pallino svg {
+  width: 21px;
+  height: 21px;
+}
+/* 🔴 Chi dei due si vede lo decide QUI, non un attributo `hidden` sull'svg:
+   entrambi stanno nella stessa cella della griglia, quindi si sostituiscono
+   senza spostare niente. */
+.pallino-iniziali {
+  display: none;
+  font-family: var(--titoli);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pallino.acceso {
+  background: var(--blu);
+  border-color: var(--blu);
   color: #fff;
+}
+.pallino.acceso:hover {
+  background: var(--blu-scuro);
+  border-color: var(--blu-scuro);
+}
+.pallino.acceso .pallino-iniziali {
+  display: block;
+}
+.pallino.acceso .pallino-omino {
+  display: none;
 }
 
 .finestra.larga {

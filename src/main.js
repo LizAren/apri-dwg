@@ -599,6 +599,31 @@ function aggiornaPermessi() {
 
 const chiedi = collegaRichiesta($('finestra-accesso'))
 
+/* ── Il caffè ─────────────────────────────────────────────────────────────
+ * Dove si offre. Vuoto = niente tasto: un pulsante che porta a una pagina
+ * inesistente è peggio di un pulsante che manca.
+ *
+ * Non passa nulla dal server, e non è una semplificazione: non c'è niente da
+ * verificare perché non c'è niente da consegnare. Chi offre non riceve nulla
+ * in cambio — soprattutto NON le funzioni col lucchetto, che restano una cosa
+ * a parte e si chiedono dal loro pannello. È quello che tiene questa tazzina
+ * dalla parte della donazione invece che da quella del listino, e su una
+ * pagina che un listino ce l'ha davvero è una distinzione da non sfumare. */
+const PAYPAL = 'https://paypal.me/FostinelliStef'
+
+const tastoCaffe = $('btn-caffe')
+if (!PAYPAL) {
+  tastoCaffe.remove()
+} else {
+  const finestraCaffe = $('finestra-caffe')
+  $('caffe-vai').href = PAYPAL
+  tastoCaffe.addEventListener('click', () => finestraCaffe.showModal())
+  $('caffe-chiudi').addEventListener('click', () => finestraCaffe.close())
+  /* Si chiude anche partendo: tornando da PayPal si troverebbe ancora aperta
+     una finestra che non serve più. */
+  $('caffe-vai').addEventListener('click', () => setTimeout(() => finestraCaffe.close(), 300))
+}
+
 // ---------------------------------------------------------------------------
 //  Lavoro salvato e link condivisi
 //

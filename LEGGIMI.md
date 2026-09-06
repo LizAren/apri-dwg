@@ -165,6 +165,35 @@ sull'estensione: **0,000%**.
 senza quella regola, aggiungendone una nuova sarebbe l'unico a non averla e non
 potrebbe nemmeno accendersela.
 
+## Il caffè
+
+Una tazzina in basso a destra, **accanto al pallino delle informazioni**, che
+porta a un link PayPal.Me. Facoltativa.
+
+🔴 **Non sblocca niente, e qui la precisazione pesa il doppio**: su questa
+pagina un listino esiste davvero — le funzioni col lucchetto — quindi il
+pannello dice per esteso che quelle si chiedono dal loro pannello e che un
+caffè non le apre e non le avvicina. È ciò che tiene la cosa una donazione
+invece che il prezzo di un permesso. Nel momento in cui un'offerta desse anche
+solo la precedenza su una richiesta d'accesso, il confine sarebbe passato.
+
+🔴 **Non sta fra i comandi, e non è una preferenza estetica**: la riga dei
+comandi è tarata per entrare **esatta** in un telefono da 390 px — prima della
+tazzina finiva a 372 su 390 — e `strumenti/schermate.mjs` conta chi sborda
+(`comandi fuori`) pretendendo **zero**. Messa lì, lo strumento la bocciava:
+provato, e il tasto è stato spostato. L'angolo del pallino informazioni è
+comunque il posto giusto, perché tiene le cose che riguardano la **pagina**
+(licenza, privacy, chi l'ha fatta) e non il disegno.
+
+⚠️ Nel documento la tazzina sta **dopo** `.info`, e serve: aprendo le
+informazioni la scheda si allarga verso sinistra e le passerebbe sopra, quindi
+il CSS la fa sparire con `~` — che guarda solo in avanti. Misura 34 px come il
+pallino, 44 sul telefono, per la stessa ragione.
+
+⚠️ Niente server, niente webhook, nessuna verifica: chi offre non riceve nulla,
+quindi non c'è niente da consegnare e niente da controllare. Il link vive in
+`PAYPAL` dentro `src/main.js`, e **se è vuoto il tasto non compare**.
+
 ## 🔴 Il salvataggio non salva il disegno
 
 Il DWG **non sale mai sul server**, nemmeno con il salvataggio acceso. Si
