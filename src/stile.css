@@ -648,6 +648,10 @@ a {
 .caffe:hover {
   color: var(--blu-chiaro);
 }
+/* La domanda è la stessa pastiglia, un posto più a sinistra. */
+.caffe.domanda {
+  right: 98px;                /* 56 della tazzina + 34 + 8 di stacco */
+}
 /* Aprendo le informazioni la scheda si allarga verso sinistra e passerebbe
    sopra la tazzina: invece di sovrapporsi, si toglie di mezzo. */
 .info[data-aperto='true'] ~ .caffe {
@@ -1038,6 +1042,9 @@ a {
     width: 44px;
     height: 44px;
     right: 66px;
+  }
+  .caffe.domanda {
+    right: 118px;
   }
   .info[data-aperto='true'] {
     width: min(360px, calc(100% - 28px));

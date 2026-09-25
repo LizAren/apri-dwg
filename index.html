@@ -37,6 +37,8 @@
     <meta property="og:image:alt" content="Cianotipo: una pianta aperta nel browser, con i simboli e le quote." />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="theme-color" content="#100f0f" />
     <script type="module" src="./src/main.js"></script>
     <link rel="stylesheet" href="./src/stile.css" />
   </head>
@@ -281,6 +283,31 @@
     </svg>
           <span class="sr-only">Offrimi un caffè</span>
         </button>
+        <!-- Le domande stanno accanto al caffè, come nel GIS e in Crinal3D:
+             due modi di rivolgersi a una persona. Stessa pastiglia, un posto
+             più a sinistra; e sta anche lei DOPO `.info`, per sparire con la
+             tazzina quando la scheda delle informazioni si apre. -->
+        <button
+          type="button"
+          class="caffe domanda"
+          id="btn-domanda"
+          title="Hai una domanda? Scrivimi"
+        >
+    <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    >
+    <circle cx="12" cy="12" r="8.6" />
+    <path d="M9.6 9.6a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2-2.4 3.5" />
+    <path d="M12 17.4h.01" />
+    </svg>
+          <span class="sr-only">Fai una domanda</span>
+        </button>
       </div>
     </main>
 
@@ -393,6 +420,37 @@
         </div>
         <div class="finestra-comandi">
           <button type="button" class="comando" id="caffe-chiudi">
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- La domanda ---------------------------------------------------------
+         Prima di aprire la posta si dice a cosa serve: un programma di posta
+         che si spalanca senza preavviso fa chiudere la pagina. -->
+    <dialog class="finestra" id="finestra-domanda">
+      <div class="finestra-dentro">
+        <h2>Scrivi allo sviluppatore</h2>
+        <p>
+          Questo tasto serve a fare una <strong>richiesta</strong> o a chiedere
+          un <strong>chiarimento</strong> direttamente a chi ha realizzato
+          Cianotipo. Per esempio: come si usa uno strumento, un disegno che non
+          si apre o si vede male, una funzione che ti servirebbe, o qualcosa
+          che non funziona come ti aspetti.
+        </p>
+        <p class="nota">
+          Si apre il tuo programma di posta con il messaggio già intestato:
+          scrivi la domanda e invia. Non c'è nessuna risposta automatica: leggo
+          e rispondo di persona, e l'indirizzo non viene usato per altro.
+        </p>
+        <div class="recapiti">
+          <a class="comando primario" id="domanda-scrivi" href="#"
+            >Apri il messaggio</a
+          >
+        </div>
+        <div class="finestra-comandi">
+          <button type="button" class="comando" id="domanda-chiudi">
             Chiudi
           </button>
         </div>

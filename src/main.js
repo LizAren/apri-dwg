@@ -624,6 +624,20 @@ if (!PAYPAL) {
   $('caffe-vai').addEventListener('click', () => setTimeout(() => finestraCaffe.close(), 300))
 }
 
+/* ── La domanda ───────────────────────────────────────────────────────────
+ * Come nel GIS e in Crinal3D: un pannello che dice a cosa serve, poi la
+ * posta già intestata. Il corpo resta vuoto di proposito: chi scrive sa cosa
+ * chiedere. */
+const finestraDomanda = $('finestra-domanda')
+$('domanda-scrivi').href =
+  'mailto:fostinellistefano@gmail.com?subject=' +
+  encodeURIComponent('Cianotipo — una domanda') +
+  '&body=' +
+  encodeURIComponent('Buongiorno,\n\n')
+$('btn-domanda').addEventListener('click', () => finestraDomanda.showModal())
+$('domanda-chiudi').addEventListener('click', () => finestraDomanda.close())
+$('domanda-scrivi').addEventListener('click', () => setTimeout(() => finestraDomanda.close(), 300))
+
 // ---------------------------------------------------------------------------
 //  Lavoro salvato e link condivisi
 //
