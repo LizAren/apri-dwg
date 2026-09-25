@@ -165,6 +165,17 @@ sull'estensione: **0,000%**.
 senza quella regola, aggiungendone una nuova sarebbe l'unico a non averla e non
 potrebbe nemmeno accendersela.
 
+## Come la trova Google (25/09/2026)
+
+`index.html` ha canonico su `/DWG/`, `robots index` e, dal 25/09, l'**anteprima
+per i social**: Open Graph e Twitter con la scheda che il portfolio pubblica già
+(`/media/vetrina/social-cianotipo.webp`), cioè una schermata vera del programma.
+Nessun file nuovo in `dist/`. Pubblicata caricando il **solo** `index.html`
+compilato: i nomi dei file in `assets/` erano identici a quelli online, e
+rimandare il `.wasm` da 9,5 MB non serviva. Il piano per farla trovare meglio
+(riscriverla come risposta a «convertire DWG in PDF online») sta in
+`/docs/contesto/reperibilita-e-pagine-servizi.md` §3.5.
+
 ## Il caffè
 
 Una tazzina in basso a destra, **accanto al pallino delle informazioni**, che
